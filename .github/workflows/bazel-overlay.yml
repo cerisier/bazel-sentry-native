@@ -44,7 +44,7 @@ jobs:
           repository-cache: true
 
       - name: Verify release provenance and overlay synchronization
-        run: ./bcr/verify_release.sh 0.16.6
+        run: ./tools/bcr/verify_release.sh 0.16.6
 
       - name: Build the minimal static and shared public graph
         run: |

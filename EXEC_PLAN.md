@@ -22,8 +22,8 @@ The development build and test matrix uses `@llvm` as a Bzlmod development depen
 - Milestone 6 is complete: `//:sentry_crash`, Linux remote unwinding, exact daemon/library manifests, and real static/shared crash-artifact processing pass on native macOS arm64 and remote Linux x86_64/aarch64. macOS x86_64 cross-build and artifact inspection pass.
 - Milestone 7 is complete: `//:sentry_shared` produces the deployable shared artifact and `//:sentry_shared_library` provides the rules_cc consumer edge. Static and shared compilation roots, public exports, runtime companion propagation, dynamic metadata, and isolated-consumer behavior are verified. Private implementation include roots no longer propagate to ordinary consumers.
 - Milestone 8 is in progress: the root and isolated graphs are integrated, Linux/macOS runtime gates are substantially complete, and the BCR contribution is staged and registry-validated. The checked-in consumer's literal-default static/shared Crashpad tests pass with Bazel 8.4.2 and 9.2.0 on remote Linux x86_64 and with Bazel 9.2.0 on remote Linux aarch64; Bazel 8.4.2 also passes the literal defaults on native macOS arm64 using consumer-owned `@llvm`. Native static/shared processing with embedded metadata passes on remote Linux x86_64/aarch64 and native macOS arm64. A native macOS x86_64 runner and the native BCR Linux arm64 Breakpad lane remain publication gates.
-- Repository/publication hardening is implemented: every Bazel-owned Breakpad/Crashpad file lives outside Git-submodule paths. All ordinary target declarations appear explicitly in the superproject's root `BUILD.bazel`; `.bzl` files retain only source manifests, pure attribute helpers, and genuine custom rule implementations. The documented public labels are unchanged, and the 53-file BCR overlay remains synchronized with those canonical sources.
-- Reproducible publication infrastructure is implemented under `bcr/`: immutable release descriptors, provenance checks, versioned overlay synchronization, non-destructive export into an official BCR checkout, official integrity refresh, official validation/materialization, exact-consumer tests, and opt-in pull-request automation.
+- Repository/publication hardening is implemented: every Bazel-owned Breakpad/Crashpad file lives outside Git-submodule paths. All ordinary target declarations appear explicitly in the superproject's root `BUILD.bazel`; `.bzl` files retain only source manifests, pure attribute helpers, and genuine custom rule implementations. The documented public labels are unchanged, and an explicit manifest selects the 53-file BCR overlay from a pinned fork commit.
+- Reproducible publication infrastructure is split between versioned `.bcr/releases/<version>/` configuration and `tools/bcr/` automation. It generates the registry entry directly in an official BCR checkout, computes integrity with official tooling, validates/materializes the entry, tests the exact consumer, and passes the validated bytes to an opt-in pull-request job. No generated registry subtree is checked into this fork.
 - Upstream inspection used `getsentry/sentry-native` release `0.16.6` and current `master` commit `0d5bec47307cba89af85525d0d1bd7fbf799c8cd` on 2026-09-16.
 
 ## Progress
@@ -124,7 +124,7 @@ Do not use GitHub's automatically generated tag archive. That archive does not c
 
 The source of truth for source selection, compile definitions, link options, and platform conditions remains upstream CMake. Keep Bazel source lists explicit and grouped similarly to their CMake counterparts. Avoid broad recursive globs: they conceal new upstream files and can accidentally compile tests, platform alternatives, or unused Crashpad tools.
 
-Development happens directly in a real fork checkout at the official release tag, with recursive upstream submodules initialized. Canonical Bazel files occupy the same paths they will have after BCR applies the overlay. `bcr/sync_overlay.sh --check <version>` proves those canonical files are byte-identical to the staged overlay, while official BCR materialization proves that the release ZIP plus overlay produces the same module boundary. There is no custom development-time materialization rule.
+Development happens directly in a real fork checkout at the official release tag, with recursive upstream submodules initialized. Canonical Bazel files occupy the same paths they will have after BCR applies the overlay. Each release descriptor pins the exact fork commit from which `tools/bcr/prepare_entry.sh` extracts the manifest-selected files. Official BCR materialization then proves that the release ZIP plus generated overlay produces the same module boundary. There is no custom development-time materialization rule.
 
 At the start of each sentry-native version update, regenerate or manually audit a checked-in parity manifest containing:
 
@@ -561,7 +561,7 @@ The contribution needs:
 - `presubmit.yml` with realistic public-platform coverage.
 - A standalone local-path consumer test retained in the source module.
 
-The contribution is staged under `bcr/`. `bcr/sync_overlay.sh <version>` copies the explicit 53-file manifest into the version overlay, while `bcr/sync_overlay.sh --check <version>` performs a read-only comparison of the root module and every staged file and rejects stale, missing, or extra entries. `source.json` points at the official release ZIP, which has no `strip_prefix`, and records the BCR tool-generated SRI for the archive and every overlay file. The staged registry has passed the official `bcr_validation` checks for source integrity, metadata, module assembly, and presubmit syntax. The expected first-version maintainer-review result for `presubmit.yml` is not a validation failure.
+The contribution is generated, not staged in this repository. `.bcr/releases/<version>/overlay_files.txt` selects 53 canonical files and the adjacent `release.json` pins the fork commit containing them. `tools/bcr/prepare_entry.sh` extracts those files into a supplied official BCR checkout, creates the version entry, and invokes the registry's integrity updater. Generated `source.json` points at the official release ZIP, which has no `strip_prefix`, and records the BCR tool-generated SRI for the archive and every overlay file. The resulting entry has passed official `bcr_validation` checks for source integrity, metadata, module assembly, and presubmit syntax. The expected first-version maintainer-review result for `presubmit.yml` is not a validation failure.
 
 BCR submission follows implementation and verified Linux/macOS support. Do not publish a module that merely analyzes while its default Crashpad runtime cannot produce a report.
 
@@ -571,11 +571,11 @@ The public development repository is a real fork of `getsentry/sentry-native`, i
 
 Git superprojects cannot track files below a submodule gitlink. Every file owned by this Bazel port must therefore live in the sentry-native superproject rather than under `external/breakpad`, `external/crashpad`, or their nested submodules. Bazel reserves `//external`, so Breakpad, Crashpad, and Sentry targets are declared explicitly in the root `BUILD.bazel` and consume sources below `external/`. Source manifests, helper sources, compatibility headers, pure attribute helpers, and custom rule implementations live under `//bazel`; no `.bzl` macro exists merely to hide ordinary target declarations. The public targets `//:sentry`, `//:sentry_shared`, `//:sentry_shared_library`, `//:crashpad_handler`, and `//:sentry_crash` remain unchanged.
 
-The BCR module continues to fetch the official sentry-native release archive directly. The archive URL and integrity are immutable per version. The overlay is an explicit version-specific list of Bazel-owned files copied from their canonical locations in this fork. Files under `bcr/modules/sentry_native/<version>/overlay` are publication output, never an independently edited source of truth.
+The BCR module continues to fetch the official sentry-native release archive directly. The archive URL and integrity are immutable per version. The overlay is an explicit version-specific list of Bazel-owned files extracted from a pinned fork commit. Publication output exists only in the BCR checkout and ultimately in the BCR repository; this fork does not retain a duplicate `modules/sentry_native/<version>` tree.
 
 Publication infrastructure belongs in this fork, while the validation implementation remains owned by `bazelbuild/bazel-central-registry`. The deterministic exporter writes the selected `modules/sentry_native/<version>` directory and metadata into a supplied BCR worktree without deleting or rewriting published history. The verification wrapper invokes the official BCR validation and presubmit-repository setup from that worktree, then the consumer wrapper runs the exact generated test module with Bazel 8.4.2 or 9.2.0. Do not copy or fork BCR validation code here.
 
-The generic `bazel-contrib/publish-to-bcr` release-archive workflow is intentionally not used. Its archive-oriented contract would publish an artifact from this fork, whereas `sentry_native` must use the official `getsentry` release asset plus an explicit BCR overlay. The local workflows therefore prepare the exact contribution directly and open a BCR pull request only after an explicit manual `publish=true` dispatch.
+The generic `bazel-contrib/publish-to-bcr` reusable workflow can point at the official `getsentry` release asset, but it currently requires `MODULE.bazel` to exist in that archive before patches are applied and does not support BCR overlays. The official sentry-native archive has no `MODULE.bazel`. Local automation therefore generates the overlay entry around official BCR tooling and opens a pull request only after an explicit manual `publish=true` dispatch. Replace this custom layer if the reusable workflow gains overlay support or upstream release archives acquire the Bazel module files.
 
 Implementation sequence:
 
@@ -583,8 +583,8 @@ Implementation sequence:
 2. [x] Move Breakpad, Crashpad, and Sentry target declarations directly into the parent-owned root `BUILD.bazel`, and update private labels without changing public targets.
 3. [x] Verify direct checkout builds with initialized submodules and the existing Linux/macOS test matrix.
 4. [x] Separate canonical overlay inputs from generated BCR output; retain an explicit audited overlay manifest.
-5. [x] Add a release descriptor containing the official archive URL, integrity, version, and upstream revision.
-6. [x] Replace ad hoc staging commands with deterministic BCR export and official-validation wrappers.
+5. [x] Add a release descriptor containing the official archive URL, integrity, version, upstream revision, and exact fork overlay commit.
+6. [x] Replace checked-in registry staging with deterministic entry generation and official-validation wrappers.
 7. [x] Reproduce the contribution from the real fork plus initialized submodules, then validate the exact official-archive-plus-overlay module on Bazel 8 and 9.
 8. [x] Push the prepared release branch and pass the hosted fork/BCR verification workflows.
 9. [ ] Explicitly dispatch publication to create and complete the BCR pull request.
@@ -602,7 +602,7 @@ Acceptance criteria:
 
 - `master` is the canonical Bazel-enabled fork branch. Its initial history is the consolidated implementation rooted at official tag `0.16.6`.
 - `upstream` is a read-only branch mirror of `getsentry/sentry-native`'s `master`. Update it only by fast-forwarding from the upstream remote.
-- Future published versions merge the corresponding official upstream release tag into `master`, adapt the Bazel port, and retain already-published directories below `bcr/modules/sentry_native` byte-for-byte before adding the next version overlay.
+- Future published versions merge the corresponding official upstream release tag into `master`, adapt and commit the Bazel port, then add a descriptor that pins that overlay commit. Already-published entries remain immutable in the BCR repository rather than being duplicated here.
 - The earlier expanded-archive development history remains available locally as `archive/sentry-native-bazel-core-snapshot`, but it is never pushed into the fork's canonical history.
 - The manual publication workflow creates `sentry_native-<version>` in `cerisier/bazel-central-registry`, based on current official BCR `main`. It never changes the sentry-native fork's `master` branch.
 
@@ -736,8 +736,8 @@ Mitigation: make compatibility tiers explicit in documentation and metadata. Add
 - 2026-09-16: Keep SDK/backend/transport/private-header dependencies behind `implementation_deps`; only `sentry.h`, SDK identity defines, and required link inputs form the ordinary public compile contract.
 - 2026-09-16: Compile embedded metadata in its own C++17 library and force-link it, rather than mixing generated C++ with backend-specific C language-mode actions.
 - 2026-09-16: Restrict anonymous BCR Bazel 8 backend/default tasks to Linux. Run macOS Bazel 8 from `bcr_test_module`, where the consumer can lawfully own and register its LLVM development toolchain.
-- 2026-09-16: Use fork `master` as the canonical Bazel-enabled branch and fork `upstream` as the exact `getsentry/master` mirror. For subsequent releases, merge the official release tag into `master` and preserve published BCR version directories byte-for-byte.
-- 2026-09-16: Publish from the official getsentry archive plus an overlay using fork-owned export automation. Do not use the generic release-archive `publish-to-bcr` action for this module.
+- 2026-09-16: Use fork `master` as the canonical Bazel-enabled branch and fork `upstream` as the exact `getsentry/master` mirror. For subsequent releases, merge the official release tag into `master`; published version directories remain immutable in BCR itself.
+- 2026-09-16: Publish from the official getsentry archive plus an overlay using fork-owned entry generation. The standard `publish-to-bcr` workflow supports arbitrary archive URLs, but not an overlaid `MODULE.bazel`; revisit it when overlay support exists.
 
 ## Outcomes
 
@@ -941,7 +941,7 @@ Verification:
 Implemented:
 
 - Explicit root `BUILD.bazel` declarations for the Breakpad, Crashpad, and Sentry graphs. No target-declaration-only macro or Bazel-owned file below either submodule path remains, while `//:sentry`, `//:sentry_shared`, `//:sentry_shared_library`, `//:crashpad_handler`, and `//:sentry_crash` remain stable.
-- A local BCR staging registry under `bcr/` with `metadata.json`, `0.16.6/MODULE.bazel`, `source.json`, `presubmit.yml`, and a 53-file overlay generated from an explicit manifest.
+- Small BCR publication inputs under `.bcr/`: a metadata template plus versioned presubmit configuration, explicit 53-file manifest, and immutable release descriptor. The complete module entry is generated only in an official BCR checkout.
 - Archive provenance against the official `sentry-native.zip`: SHA-256 `d35145daaafddc50c0c87ec564acf0ba9968e67b23981e7f57c702b2dd6f2ff1`, no `strip_prefix`, and per-overlay SRI values generated by the official BCR integrity tool.
 - Presubmit coverage for Bazel 8.x/9.x minimal public targets on Linux/macOS x86_64/aarch64; Bazel 9 Breakpad, Crashpad, and native backend artifact tests on all four desktop architecture runners; Linux-only anonymous Bazel 8 Crashpad/default lanes; and Bazel 8/9 static/shared Crashpad consumer tests. The LLVM-owning `bcr_test_module` supplies the Bazel 8 macOS default lane because anonymous modules cannot inherit a dependency's development toolchain.
 - A shared-library Crashpad smoke consumer in `e2e/bcr`, complementing the existing static consumer.
@@ -949,8 +949,8 @@ Implemented:
 - Module compatibility declaration `bazel_compatibility = [">=8.4.2"]`, matching the lowest version actually exercised.
 - Apple MIG's checked-in lexer/parser outputs are ordinary overlay files under `bazel/apple_mig/migcom`, exposed by the semantic `//bazel/apple_mig:migcom_parser` target. The upstream archive is no longer patched; `@apple_mig//:migcom_headers` and `@apple_mig//:migcom_non_apple_headers` expose only the corresponding source headers.
 - Breakpad's vendored LSS header is owned by a root-package target and exposed under its source-level `third_party/lss` namespace with `include_prefix`; the graph no longer exports a parent directory through `includes = ["../.."]`. Bazel normalizes the reserved physical `external/third_party/lss/...` path to logical `lss/...`, so adding the `third_party` prefix is sufficient and an explicit physical `strip_include_prefix` is invalid in an external-module consumer.
-- The implementation now lives on a true upstream-descended fork branch with recursive submodules. `bcr/releases/0.16.6.json` pins the upstream tag/commit and official archive identity; verification rejects a changed gitlink, mismatched checkout, stale overlay, or inconsistent `source.json` provenance.
-- Fork-owned shell tooling synchronizes the overlay, exports without rewriting published BCR history, invokes the official integrity updater, accepts only the documented validator statuses, materializes official presubmit repositories, and runs the exact generated consumer. `bcr/README.md` documents the complete next-release procedure.
+- The implementation now lives on a true upstream-descended fork branch with recursive submodules. `.bcr/releases/0.16.6/release.json` pins the upstream tag/commit, official archive identity, and exact fork overlay commit; verification rejects changed gitlinks, mismatched checkouts, or canonical files that drift from that pin.
+- Fork-owned shell tooling under `tools/bcr/` extracts the pinned overlay into an official registry checkout, invokes the official integrity updater, accepts only documented validator statuses, materializes official presubmit repositories, and runs the exact generated consumer. `tools/bcr/README.md` documents the complete next-release procedure.
 - Pinned GitHub Actions run Bazel 8.4.2/9.2.0 minimal static/shared consumers on Linux and macOS, validate the exact BCR assembly on Linux, and upload the prepared module. Publication is a separate explicit `publish=true` dispatch requiring `BCR_PUBLISH_TOKEN`; it creates the version branch in `cerisier/bazel-central-registry` and opens the upstream pull request.
 
 Verification:
@@ -982,8 +982,23 @@ Verification:
 - From a fresh official BCR checkout at `fde2926e09c7250c6484c109671ab39227c8598b`, the new exporter reproduced `sentry_native@0.16.6`; `bcr_validation` reported every automated check good and only the expected new-module maintainer-review status. `setup_presubmit_repos` then reconstructed both official test repositories from the getsentry ZIP plus overlay.
 - The newly materialized `e2e/bcr` consumer passed its default static and shared Crashpad runtime tests on native macOS arm64 with both Bazel 9.2.0 (2,147 actions) and the declared floor Bazel 8.4.2 (2,143 actions). Both runs used the consumer-owned LLVM toolchain and exercised source-built Apple MIG before launching the handler-backed tests.
 - The real fork checkout with initialized submodules built `//:sentry`, `//:sentry_shared`, `//:sentry_shared_library`, and both none/none smoke consumers with Bazel 9.2.0; the static and shared binaries both ran. Artifact inspection reports an arm64 `libsentry.dylib`, `@rpath/libsentry.dylib`, only `libSystem` as a runtime dependency, and 421 exported `sentry_*` symbols. Action-query reports four C++ link actions for the shared target closure.
-- Re-running the official BCR integrity updater through `bcr/refresh_integrity.sh` produced no repository diff, proving that the checked-in archive and all 53 overlay SRI values are reproducible from current canonical inputs.
+- Before removal of the redundant staging copy, re-running the official BCR integrity updater produced no diff. The replacement generator now recomputes all archive and overlay SRI values in the target BCR checkout and compares the downloaded archive against the immutable release descriptor.
 - After promoting the Bazel branch to fork `master`, manually dispatched run `35141651394` passed all four smoke lanes: Ubuntu 24.04 and macOS 14 with Bazel 8.4.2 and 9.2.0. Run `35141654259` passed official BCR export, validation, materialization, the exact default static/shared Crashpad consumer, and prepared-module upload. Its publication job was intentionally skipped because the dispatch set `publish=false`. Fork branch `upstream` remained exactly `0d5bec47307cba89af85525d0d1bd7fbf799c8cd`, equal to `getsentry/master` during the migration.
+
+### Publication-layout hardening report
+
+- Removed the checked-in `bcr/modules/sentry_native` publication copy. Canonical Bazel files now exist only at their source-checkout paths; generated module metadata, `MODULE.bazel`, `source.json`, overlay copies, and integrity values exist only in the target BCR checkout.
+- Retained only compact, versioned inputs under `.bcr/releases/0.16.6`: the release descriptor, explicit 53-file manifest, and presubmit configuration. The descriptor pins overlay commit `7f1ba20c885f1097c99cccb08331692b68b1b0ad` as well as the upstream tag, commit, and official archive identity.
+- Replaced staging synchronization/export scripts with `tools/bcr/prepare_entry.sh`. It extracts `MODULE.bazel` and every manifest-selected file from the pinned commit, merges module metadata without discarding BCR-owned version history, invokes the official integrity updater, and verifies the resulting archive identity and overlay boundary.
+- Updated CI so validation generates the entry in a fresh official BCR checkout. The publication job downloads that validated module artifact and commits those exact bytes instead of regenerating them independently.
+- Corrected the `publish-to-bcr` finding: it can target the official getsentry archive URL. The current incompatibility is its requirement that `MODULE.bazel` already be present in the archive and its lack of BCR overlay support.
+
+Verification:
+
+- `tools/bcr/verify_release.sh 0.16.6` reports exactly 53 files pinned to the overlay commit.
+- Generation against a fresh current BCR checkout produced a module subtree byte-for-byte identical to the former checked-in entry, including `source.json` and every computed SRI value.
+- Current official `bcr_validation` passed source URL, archive integrity, overlay/module assembly, metadata identity, and presubmit syntax; only the expected first-version maintainer review remained. Current `setup_presubmit_repos` successfully materialized both official consumer repositories.
+- A subsequent native macOS runtime invocation reached analysis and compilation but the host exhausted disk space while rebuilding LLVM. This was an environment failure after the generated-entry equivalence and official validation checks; the identical former entry's Bazel 8/9 runtime results remain recorded above.
 
 On final completion, also record:
 

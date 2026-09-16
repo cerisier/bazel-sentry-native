@@ -1,0 +1,10 @@
+{
+    "archive_integrity": "sha256-01FF2qr93FDAyH7FZKzwuplo5nsjmB5/V8cCst1vL/E=",
+    "archive_sha256": "d35145daaafddc50c0c87ec564acf0ba9968e67b23981e7f57c702b2dd6f2ff1",
+    "archive_size": 9071053,
+    "archive_url": "https://github.com/getsentry/sentry-native/releases/download/0.16.6/sentry-native.zip",
+    "module_version": "0.16.6",
+    "overlay_commit": "7f1ba20c885f1097c99cccb08331692b68b1b0ad",
+    "upstream_commit": "672b86c77c1864e1c0b5e72eefadc078e30ef700",
+    "upstream_tag": "0.16.6"
+}
