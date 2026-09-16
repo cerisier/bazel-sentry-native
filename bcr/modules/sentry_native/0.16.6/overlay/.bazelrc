@@ -1,0 +1,20 @@
+common --enable_bzlmod
+
+# The upstream source tree owns a top-level `external/` directory. Bazel's
+# legacy repository layout reserves that path inside the main-repository
+# execroot, so its source symlinks disappear unless sibling layout is enabled.
+common --experimental_sibling_repository_layout
+# The release payload vendors Google's benchmark repository for upstream-only
+# benchmarks. Its own Bazel packages require unrelated Python/gtest workspace
+# setup and are not part of the sentry-native production or test graph.
+common --deleted_packages=external/benchmark,external/benchmark/bindings/python/google_benchmark,external/benchmark/test,external/benchmark/tools
+test --test_output=errors
+
+# Hermetic Linux target/worker pairs for development and remote execution.
+# Keep the execution platform explicit: @llvm//:rbe_platform follows the host
+# architecture and can otherwise schedule a cross-built binary on the wrong
+# remote worker architecture.
+common:llvm_linux_x86_64 --platforms=@llvm//platforms:linux_x86_64_gnu.2.28
+common:llvm_linux_x86_64 --extra_execution_platforms=@llvm//:rbe_linux_x86_64
+common:llvm_linux_aarch64 --platforms=@llvm//platforms:linux_aarch64_gnu.2.28
+common:llvm_linux_aarch64 --extra_execution_platforms=@llvm//:rbe_linux_aarch64
