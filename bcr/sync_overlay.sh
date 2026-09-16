@@ -3,24 +3,53 @@ set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "${script_dir}/.." && pwd)"
-version_root="${script_dir}/modules/sentry_native/0.16.6"
-overlay_root="${version_root}/overlay"
 manifest="${script_dir}/overlay_files.txt"
 
 usage() {
-    echo "usage: $0 [--check]" >&2
+    echo "usage: $0 [--check] [version]" >&2
 }
 
 mode="sync"
-if [[ $# -gt 1 ]]; then
-    usage
+version=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --check)
+            mode="check"
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        --*)
+            usage
+            exit 2
+            ;;
+        *)
+            if [[ -n "${version}" ]]; then
+                usage
+                exit 2
+            fi
+            version="$1"
+            ;;
+    esac
+    shift
+done
+
+if [[ -z "${version}" ]]; then
+    version="$(sed -n 's/^[[:space:]]*version[[:space:]]*=[[:space:]]*"\([^"]*\)"[[:space:]]*,[[:space:]]*$/\1/p' "${repo_root}/MODULE.bazel" | head -n 1)"
+fi
+
+if [[ -z "${version}" || "${version}" == *[!A-Za-z0-9._+-]* ]]; then
+    echo "invalid module version: ${version}" >&2
     exit 2
-elif [[ $# -eq 1 ]]; then
-    if [[ "$1" != "--check" ]]; then
-        usage
-        exit 2
-    fi
-    mode="check"
+fi
+
+version_root="${script_dir}/modules/sentry_native/${version}"
+overlay_root="${version_root}/overlay"
+
+if [[ ! -d "${version_root}" ]]; then
+    echo "missing staged module version: ${version_root}" >&2
+    exit 1
 fi
 
 check_overlay() {

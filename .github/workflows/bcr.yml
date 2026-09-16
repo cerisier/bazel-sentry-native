@@ -1,0 +1,156 @@
+name: BCR contribution
+
+on:
+  push:
+    branches:
+      - "cerisier/**"
+    paths:
+      - ".github/workflows/bcr.yml"
+      - "BUILD.bazel"
+      - "MODULE.bazel"
+      - "bazel/**"
+      - "bcr/**"
+      - "config/**"
+      - "e2e/bcr/**"
+      - "tests/**"
+      - "vendor/libunwind/**"
+  pull_request:
+    paths:
+      - ".github/workflows/bcr.yml"
+      - "BUILD.bazel"
+      - "MODULE.bazel"
+      - "bazel/**"
+      - "bcr/**"
+      - "config/**"
+      - "e2e/bcr/**"
+      - "tests/**"
+      - "vendor/libunwind/**"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: sentry_native module version
+        required: true
+        default: 0.16.6
+        type: string
+      publish:
+        description: Push the prepared branch and open the upstream BCR pull request
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SENTRY_NATIVE_VERSION: ${{ inputs.version || '0.16.6' }}
+
+jobs:
+  validate:
+    name: Official BCR assembly and consumer
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out the release branch and submodules
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Check out the official BCR
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: bazelbuild/bazel-central-registry
+          path: bazel-central-registry
+          persist-credentials: false
+
+      - name: Set up Bazel
+        uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+        with:
+          bazelisk-cache: true
+          module-root: bazel-central-registry
+          repository-cache: true
+
+      - name: Export, validate, and materialize the contribution
+        run: ./bcr/verify_submission.sh "${SENTRY_NATIVE_VERSION}" bazel-central-registry
+
+      - name: Test the exact materialized consumer
+        run: ./bcr/test_materialized_module.sh "${SENTRY_NATIVE_VERSION}" bazel-central-registry 9.2.0
+
+      - name: Upload the prepared module
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sentry_native-${{ env.SENTRY_NATIVE_VERSION }}-bcr
+          path: bazel-central-registry/modules/sentry_native
+          if-no-files-found: error
+
+  publish:
+    name: Open the BCR pull request
+    if: github.event_name == 'workflow_dispatch' && inputs.publish == true
+    needs: validate
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out the release branch and submodules
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Check out the official BCR
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: bazelbuild/bazel-central-registry
+          path: bazel-central-registry
+          persist-credentials: false
+
+      - name: Export the verified contribution
+        run: ./bcr/export_module.sh "${SENTRY_NATIVE_VERSION}" bazel-central-registry
+
+      - name: Push the publication branch and open the pull request
+        env:
+          GH_TOKEN: ${{ secrets.BCR_PUBLISH_TOKEN }}
+        run: |
+          if [[ -z "${GH_TOKEN}" ]]; then
+            echo "BCR_PUBLISH_TOKEN is required when publish=true" >&2
+            exit 1
+          fi
+
+          branch="sentry_native-${SENTRY_NATIVE_VERSION}"
+          existing_pr="$(gh pr list \
+            --repo bazelbuild/bazel-central-registry \
+            --head "cerisier:${branch}" \
+            --state open \
+            --json url \
+            --jq '.[0].url // empty')"
+          if [[ -n "${existing_pr}" ]]; then
+            echo "BCR pull request already open: ${existing_pr}"
+            exit 0
+          fi
+
+          if git ls-remote --exit-code --heads \
+            https://github.com/cerisier/bazel-central-registry.git \
+            "refs/heads/${branch}" >/dev/null; then
+            echo "fork branch ${branch} exists without an open pull request" >&2
+            exit 1
+          fi
+
+          git -C bazel-central-registry switch -c "${branch}"
+          git -C bazel-central-registry config user.name "Corentin Kerisit"
+          git -C bazel-central-registry config user.email "corentin.kerisit@gmail.com"
+          git -C bazel-central-registry add modules/sentry_native
+          git -C bazel-central-registry commit -m "sentry_native@${SENTRY_NATIVE_VERSION}"
+
+          gh auth setup-git
+          git -C bazel-central-registry remote add fork \
+            https://github.com/cerisier/bazel-central-registry.git
+          git -C bazel-central-registry push fork \
+            "HEAD:refs/heads/${branch}"
+
+          gh pr create \
+            --repo bazelbuild/bazel-central-registry \
+            --base main \
+            --head "cerisier:${branch}" \
+            --title "sentry_native@${SENTRY_NATIVE_VERSION}" \
+            --body "Adds sentry_native@${SENTRY_NATIVE_VERSION} from the official getsentry release archive with its versioned Bazel overlay."
