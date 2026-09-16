@@ -1,0 +1,4 @@
+e2e/bcr/bazel-bcr
+e2e/bcr/bazel-bin
+e2e/bcr/bazel-out
+e2e/bcr/bazel-testlogs
