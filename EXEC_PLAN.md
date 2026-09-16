@@ -51,6 +51,8 @@ The development build and test matrix uses `@llvm` as a Bzlmod development depen
 - [x] Create the public fork and preserve an unmodified upstream-tracking `master` branch.
 - [x] Add deterministic release export and official-BCR verification wrappers owned by this fork.
 - [x] Add Linux/macOS Bazel smoke CI plus non-publishing-by-default BCR validation and opt-in publication workflows.
+- [x] Push `cerisier/sentry-native-bazel-core` to the public fork and pass both hosted workflows.
+- [ ] Explicitly dispatch the guarded publisher and complete the upstream BCR pull request.
 - [ ] Start the separate Windows milestone.
 
 ## Scope
@@ -584,7 +586,8 @@ Implementation sequence:
 5. [x] Add a release descriptor containing the official archive URL, integrity, version, and upstream revision.
 6. [x] Replace ad hoc staging commands with deterministic BCR export and official-validation wrappers.
 7. [x] Reproduce the contribution from the real fork plus initialized submodules, then validate the exact official-archive-plus-overlay module on Bazel 8 and 9.
-8. [ ] Push the prepared release branch and explicitly dispatch publication to create the BCR pull request.
+8. [x] Push the prepared release branch and pass the hosted fork/BCR verification workflows.
+9. [ ] Explicitly dispatch publication to create and complete the BCR pull request.
 
 Acceptance criteria:
 
@@ -979,6 +982,7 @@ Verification:
 - The newly materialized `e2e/bcr` consumer passed its default static and shared Crashpad runtime tests on native macOS arm64 with both Bazel 9.2.0 (2,147 actions) and the declared floor Bazel 8.4.2 (2,143 actions). Both runs used the consumer-owned LLVM toolchain and exercised source-built Apple MIG before launching the handler-backed tests.
 - The real fork checkout with initialized submodules built `//:sentry`, `//:sentry_shared`, `//:sentry_shared_library`, and both none/none smoke consumers with Bazel 9.2.0; the static and shared binaries both ran. Artifact inspection reports an arm64 `libsentry.dylib`, `@rpath/libsentry.dylib`, only `libSystem` as a runtime dependency, and 421 exported `sentry_*` symbols. Action-query reports four C++ link actions for the shared target closure.
 - Re-running the official BCR integrity updater through `bcr/refresh_integrity.sh` produced no repository diff, proving that the checked-in archive and all 53 overlay SRI values are reproducible from current canonical inputs.
+- Hosted run `35140355724` passed all four fork smoke lanes: Ubuntu 24.04 and macOS 14 with Bazel 8.4.2 and 9.2.0. Hosted run `35140355826` passed official BCR export, validation, materialization, the exact default static/shared Crashpad consumer, and prepared-module upload. Its publication job was intentionally skipped because the triggering push did not request `publish=true`.
 
 On final completion, also record:
 
