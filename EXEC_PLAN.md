@@ -12,7 +12,7 @@ The development build and test matrix uses `@llvm` as a Bzlmod development depen
 
 ## Current Status
 
-- The public development repository is the real GitHub fork `cerisier/sentry-native`. Branch `cerisier/sentry-native-bazel-core` descends from the official `0.16.6` tag commit `672b86c77c1864e1c0b5e72eefadc078e30ef700`; `master` remains an upstream mirror.
+- The public development repository is the real GitHub fork `cerisier/sentry-native`. Its canonical `master` branch contains the Bazel port and descends from the official `0.16.6` tag commit `672b86c77c1864e1c0b5e72eefadc078e30ef700`; fork branch `upstream` mirrors `getsentry/master` exactly.
 - Development uses the fork checkout with upstream's recursive Git submodules. BCR separately assembles the exact official `0.16.6` release ZIP plus the versioned overlay, and the official BCR tooling verifies that boundary.
 - Milestone 1 module/configuration scaffolding is implemented.
 - Milestone 2 is complete for Linux x86_64/aarch64 and macOS x86_64/arm64: native `//:sentry`, explicit source manifests, vendored Linux libunwind, and the 568 applicable `none`/`inproc` unit cases. macOS arm64 runs locally; Linux arm64 runs on remote workers with `@llvm`; the other supported desktop architectures cross-build.
@@ -48,10 +48,10 @@ The development build and test matrix uses `@llvm` as a Bzlmod development depen
 - [x] Prepare and validate the BCR module contribution.
 - [x] Move Bazel-owned helper files and backend target declarations out of Git-submodule paths.
 - [x] Replace the macOS host-MIG exception with source-built Apple MIG 138 and verify macOS arm64/x86_64 cross-builds on Linux remote workers.
-- [x] Create the public fork and preserve an unmodified upstream-tracking `master` branch.
+- [x] Create the public fork, promote the Bazel port to its default `master`, and preserve an unmodified `upstream` mirror of `getsentry/master`.
 - [x] Add deterministic release export and official-BCR verification wrappers owned by this fork.
 - [x] Add Linux/macOS Bazel smoke CI plus non-publishing-by-default BCR validation and opt-in publication workflows.
-- [x] Push `cerisier/sentry-native-bazel-core` to the public fork and pass both hosted workflows.
+- [x] Push the Bazel implementation to the public fork and pass both hosted workflows before promoting it to `master`.
 - [ ] Explicitly dispatch the guarded publisher and complete the upstream BCR pull request.
 - [ ] Start the separate Windows milestone.
 
@@ -600,9 +600,10 @@ Acceptance criteria:
 
 ## Repository Branch Plan
 
-- `master` mirrors `getsentry/sentry-native` and is not the publication branch.
-- `cerisier/sentry-native-bazel-core` is the consolidated first-release branch rooted at official tag `0.16.6`. The earlier development commits remain available locally as `archive/sentry-native-bazel-core-snapshot`, but that unrelated archive-import history is never pushed as the fork's implementation ancestry.
-- Future published versions use a release branch rooted at the corresponding official upstream tag. They retain already-published directories below `bcr/modules/sentry_native` byte-for-byte, then add the next version overlay.
+- `master` is the canonical Bazel-enabled fork branch. Its initial history is the consolidated implementation rooted at official tag `0.16.6`.
+- `upstream` is a read-only branch mirror of `getsentry/sentry-native`'s `master`. Update it only by fast-forwarding from the upstream remote.
+- Future published versions merge the corresponding official upstream release tag into `master`, adapt the Bazel port, and retain already-published directories below `bcr/modules/sentry_native` byte-for-byte before adding the next version overlay.
+- The earlier expanded-archive development history remains available locally as `archive/sentry-native-bazel-core-snapshot`, but it is never pushed into the fork's canonical history.
 - The manual publication workflow creates `sentry_native-<version>` in `cerisier/bazel-central-registry`, based on current official BCR `main`. It never changes the sentry-native fork's `master` branch.
 
 ## Risks and Mitigations
@@ -735,7 +736,7 @@ Mitigation: make compatibility tiers explicit in documentation and metadata. Add
 - 2026-09-16: Keep SDK/backend/transport/private-header dependencies behind `implementation_deps`; only `sentry.h`, SDK identity defines, and required link inputs form the ordinary public compile contract.
 - 2026-09-16: Compile embedded metadata in its own C++17 library and force-link it, rather than mixing generated C++ with backend-specific C language-mode actions.
 - 2026-09-16: Restrict anonymous BCR Bazel 8 backend/default tasks to Linux. Run macOS Bazel 8 from `bcr_test_module`, where the consumer can lawfully own and register its LLVM development toolchain.
-- 2026-09-16: Keep fork `master` as an upstream mirror and root each Bazel publication branch at the corresponding official release tag. Preserve published BCR version directories byte-for-byte on subsequent release branches.
+- 2026-09-16: Use fork `master` as the canonical Bazel-enabled branch and fork `upstream` as the exact `getsentry/master` mirror. For subsequent releases, merge the official release tag into `master` and preserve published BCR version directories byte-for-byte.
 - 2026-09-16: Publish from the official getsentry archive plus an overlay using fork-owned export automation. Do not use the generic release-archive `publish-to-bcr` action for this module.
 
 ## Outcomes

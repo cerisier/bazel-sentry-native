@@ -6,11 +6,11 @@ validation and presubmit assembly.
 
 ## Repository model
 
-- `master` mirrors `getsentry/sentry-native` and should not contain the Bazel
-  overlay unless upstream accepts it.
-- A Bazel release branch starts at the exact official upstream tag. The first
-  release branch is `cerisier/sentry-native-bazel-core`, based on `0.16.6`.
-- Clone release branches with `--recurse-submodules`. All Bazel-owned files live
+- `master` is the fork's canonical Bazel-enabled development branch. Its first
+  published state is based on the exact official `0.16.6` tag.
+- `upstream` mirrors `getsentry/sentry-native`'s `master` branch exactly and
+  never carries fork-owned commits.
+- Clone `master` with `--recurse-submodules`. All Bazel-owned files live
   in the superproject; no overlay file is stored below a submodule gitlink.
 - Canonical editable files live at their normal checkout paths. The files under
   `bcr/modules/sentry_native/<version>/overlay` are generated publication
@@ -18,9 +18,10 @@ validation and presubmit assembly.
 - BCR always downloads the official `getsentry` release asset. It never fetches
   a fork archive or this branch.
 
-For a later upstream release, create a new branch from its official tag, port
-the canonical Bazel files, record the immutable input in
-`bcr/releases/<version>.json`, and retain all already-published module versions
+For a later upstream release, fast-forward `upstream` from the upstream remote,
+merge the selected official release tag into `master`, update the canonical
+Bazel files, and record the immutable input in
+`bcr/releases/<version>.json`. Retain all already-published module versions
 unchanged under `bcr/modules/sentry_native`.
 
 ## Local preparation

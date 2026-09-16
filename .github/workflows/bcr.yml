@@ -3,6 +3,7 @@ name: BCR contribution
 on:
   push:
     branches:
+      - master
       - "cerisier/**"
     paths:
       - ".github/workflows/bcr.yml"
@@ -53,7 +54,7 @@ jobs:
     name: Official BCR assembly and consumer
     runs-on: ubuntu-24.04
     steps:
-      - name: Check out the release branch and submodules
+      - name: Check out the Bazel branch and submodules
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
@@ -92,7 +93,7 @@ jobs:
     needs: validate
     runs-on: ubuntu-24.04
     steps:
-      - name: Check out the release branch and submodules
+      - name: Check out the Bazel branch and submodules
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
