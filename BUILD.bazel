@@ -23,7 +23,6 @@ load(
     "CRASHPAD_SNAPSHOT_MACOS_TEXTUAL_HDRS",
     "CRASHPAD_SNAPSHOT_X86_HDRS",
     "CRASHPAD_SNAPSHOT_X86_SRCS",
-    "crashpad_handler_supported_configuration",
 )
 load("//bazel:crashpad_mig.bzl", "crashpad_mig")
 load(
@@ -59,12 +58,6 @@ load(
     "crashpad_supported_platforms",
 )
 load(
-    "//bazel:sentry.bzl",
-    "sentry_implementation_defines",
-    "sentry_supported_core_configuration",
-    "sentry_supported_platforms",
-)
-load(
     "//bazel:sentry_sources.bzl",
     "BACKEND_SRCS",
     "COMMON_PRIVATE_HDRS",
@@ -85,6 +78,42 @@ load(
 
 package(default_visibility = ["//visibility:private"])
 
+_SENTRY_SUPPORTED_PLATFORMS = select({
+    "//config:linux_aarch64": [],
+    "//config:linux_x86_64": [],
+    "//config:macos_aarch64": [],
+    "//config:macos_x86_64": [],
+    "//conditions:default": ["@platforms//:incompatible"],
+}) + select({
+    "@rules_cc//cc/libc:glibc": [],
+    "@rules_cc//cc/libc:macosx": [],
+    "//conditions:default": ["@platforms//:incompatible"],
+})
+
+# The settings accept values for deferred platforms so the public configuration
+# contract does not need to change when those platforms are ported. Reject the
+# currently unsupported combinations at each public SDK entry point.
+_SENTRY_SUPPORTED_CONFIGURATION = _SENTRY_SUPPORTED_PLATFORMS + select({
+    "//config:backend_breakpad": [],
+    "//config:backend_crashpad_or_auto_stacktrace_disabled": [],
+    "//config:backend_custom": [],
+    "//config:backend_inproc": [],
+    "//config:backend_native": [],
+    "//config:backend_none": [],
+    "//conditions:default": ["@platforms//:incompatible"],
+}) + select({
+    "//config:transport_auto": [],
+    "//config:transport_curl": [],
+    "//config:transport_custom": [],
+    "//config:transport_none": [],
+    "//conditions:default": ["@platforms//:incompatible"],
+}) + select({
+    "//config:screenshot_auto": [],
+    "//config:screenshot_custom": [],
+    "//config:screenshot_none": [],
+    "//conditions:default": ["@platforms//:incompatible"],
+})
+
 cc_library(
     name = "crashpad_interface",
     defines = [
@@ -102,7 +131,6 @@ cc_library(
         "external/crashpad",
         "external/crashpad/third_party/mini_chromium/mini_chromium",
     ],
-    target_compatible_with = crashpad_supported_platforms(),
 )
 
 objc_library(
@@ -170,7 +198,6 @@ cc_library(
         ],
         "//conditions:default": [],
     }),
-    target_compatible_with = crashpad_supported_platforms(),
     deps = [":crashpad_interface"] + select({
         "@platforms//os:macos": [":_mini_chromium_macos_objc"],
         "//conditions:default": [],
@@ -486,7 +513,6 @@ cc_library(
         "@platforms//os:linux": ["-ldl"],
         "//conditions:default": [],
     }),
-    target_compatible_with = crashpad_supported_platforms(),
     textual_hdrs = select({
         "@platforms//os:linux": ["external/crashpad/util/misc/no_cfi_icall.h"],
         "//conditions:default": [],
@@ -506,7 +532,6 @@ cc_library(
 # CMake exposes an INTERFACE target on all non-MSVC platforms.
 cc_library(
     name = "crashpad_getopt",
-    target_compatible_with = crashpad_supported_platforms(),
 )
 
 cc_library(
@@ -515,7 +540,6 @@ cc_library(
     hdrs = ["external/crashpad/third_party/mpack/mpack.h"],
     copts = crashpad_copts(),
     includes = ["external/crashpad/third_party/mpack"],
-    target_compatible_with = crashpad_supported_platforms(),
     deps = [":crashpad_interface"],
 )
 
@@ -529,7 +553,6 @@ cc_library(
         "ZLIB_CONST",
     ],
     includes = ["external/crashpad"],
-    target_compatible_with = crashpad_supported_platforms(),
     deps = ["@zlib"],
 )
 
@@ -538,7 +561,6 @@ cc_library(
     srcs = ["external/crashpad/tools/tool_support.cc"],
     hdrs = ["external/crashpad/tools/tool_support.h"],
     copts = crashpad_copts(),
-    target_compatible_with = crashpad_supported_platforms(),
     textual_hdrs = ["external/crashpad/package.h"],
     deps = [
         ":crashpad_interface",
@@ -677,7 +699,6 @@ cc_library(
         ],
         "//conditions:default": [],
     }),
-    target_compatible_with = crashpad_supported_platforms(),
     textual_hdrs = [
         "external/crashpad/package.h",
         "external/crashpad/util/misc/arm64_pac_bti.S",
@@ -788,7 +809,6 @@ cc_library(
     }),
     copts = crashpad_copts(),
     includes = ["external/crashpad"],
-    target_compatible_with = crashpad_supported_platforms() + crashpad_handler_supported_configuration(),
     textual_hdrs = select({
         "@platforms//os:macos": CRASHPAD_SNAPSHOT_MACOS_TEXTUAL_HDRS,
         "//conditions:default": [],
@@ -808,7 +828,6 @@ cc_library(
     hdrs = CRASHPAD_MINIDUMP_HDRS,
     copts = crashpad_copts(),
     includes = ["external/crashpad"],
-    target_compatible_with = crashpad_supported_platforms() + crashpad_handler_supported_configuration(),
     deps = [
         ":crashpad_compat",
         ":crashpad_interface",
@@ -832,7 +851,6 @@ cc_library(
     }),
     copts = crashpad_copts(),
     includes = ["external/crashpad"],
-    target_compatible_with = crashpad_supported_platforms() + crashpad_handler_supported_configuration(),
     deps = [
         ":crashpad_compat",
         ":crashpad_interface",
@@ -881,7 +899,10 @@ cc_binary(
     }),
     copts = crashpad_copts(),
     linkstatic = True,
-    target_compatible_with = crashpad_supported_platforms() + crashpad_handler_supported_configuration(),
+    target_compatible_with = crashpad_supported_platforms() + select({
+        "//config:crashpad_stacktrace_disabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     visibility = ["//:__pkg__"],
     deps = [
         ":crashpad_client",
@@ -924,7 +945,64 @@ _SENTRY_IMPLEMENTATION_SRCS = COMMON_SRCS + UNIX_SRCS + DEFAULT_FEATURE_SRCS + s
     "//conditions:default": [],
 })
 
-_SENTRY_IMPLEMENTATION_DEFINES = sentry_implementation_defines()
+_SENTRY_IMPLEMENTATION_DEFINES = [
+    "SENTRY_BATCHER_BUFFER_COUNT=$(SENTRY_BATCHER_BUFFER_COUNT_VALUE)",
+    "SENTRY_HANDLER_STACK_SIZE=$(SENTRY_HANDLER_STACK_SIZE_VALUE)",
+] + select({
+    "//config:linux_aarch64": [
+        "SENTRY_WITH_UNWINDER_LIBUNWIND",
+        "SIZEOF_LONG=8",
+    ],
+    "//config:linux_x86_64": [
+        "SENTRY_WITH_UNWINDER_LIBUNWIND",
+        "SIZEOF_LONG=8",
+    ],
+    "//config:macos_aarch64": [
+        "SENTRY_WITH_UNWINDER_LIBUNWIND_MAC",
+        "SIZEOF_LONG=8",
+    ],
+    "//config:macos_x86_64": [
+        "SENTRY_WITH_UNWINDER_LIBUNWIND_MAC",
+        "SIZEOF_LONG=8",
+    ],
+    "//conditions:default": [],
+}) + select({
+    "//config:backend_breakpad": ["SENTRY_BACKEND_BREAKPAD"],
+    "//config:backend_crashpad_or_auto": ["SENTRY_BACKEND_CRASHPAD"],
+    "//config:backend_inproc": [
+        "SENTRY_BACKEND_INPROC",
+        "SENTRY_WITH_INPROC_BACKEND",
+    ],
+    "//config:backend_native": [
+        "SENTRY_BACKEND_NATIVE",
+        "SENTRY_WITH_NATIVE_BACKEND",
+    ],
+    "//config:backend_none": [],
+    "//conditions:default": [],
+}) + select({
+    "//config:screenshot_auto": ["SENTRY_SCREENSHOT_NONE"],
+    "//config:screenshot_custom": ["SENTRY_SCREENSHOT_CUSTOM"],
+    "//config:screenshot_none": ["SENTRY_SCREENSHOT_NONE"],
+    "//conditions:default": [],
+}) + select({
+    "//config:transport_auto_link_curl_auto": ["SENTRY_LINK_CURL"],
+    "//config:transport_auto_link_curl_on": ["SENTRY_LINK_CURL"],
+    "//config:transport_curl_link_curl_auto": ["SENTRY_LINK_CURL"],
+    "//config:transport_curl_link_curl_on": ["SENTRY_LINK_CURL"],
+    "//conditions:default": [],
+}) + select({
+    "//config:transport_compression_enabled": ["SENTRY_TRANSPORT_COMPRESSION"],
+    "//conditions:default": [],
+}) + select({
+    "//config:integration_platform_enabled": ["SENTRY_INTEGRATION_PLATFORM"],
+    "//conditions:default": [],
+}) + select({
+    "//config:integration_qt_enabled": ["SENTRY_INTEGRATION_QT"],
+    "//conditions:default": [],
+}) + select({
+    "//config:embed_info_enabled": ["SENTRY_EMBED_INFO=1"],
+    "//conditions:default": [],
+})
 
 _SENTRY_STATIC_LINK_DEPS = [":_sentry_mpack"] + select({
     "//config:embed_info_enabled": [":_sentry_embedded_info_static"],
@@ -1026,7 +1104,7 @@ cc_library(
         "include",
         "src",
     ],
-    target_compatible_with = sentry_supported_platforms(),
+    target_compatible_with = _SENTRY_SUPPORTED_PLATFORMS,
     toolchains = [
         "//config:sdk_name",
         "//config:sdk_version",
@@ -1053,11 +1131,7 @@ cc_library(
     ],
     local_defines = [
         "SENTRY_BUILD_STATIC",
-    ] + sentry_implementation_defines(),
-    target_compatible_with = sentry_supported_platforms() + select({
-        "//config:backend_breakpad": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
+    ] + _SENTRY_IMPLEMENTATION_DEFINES,
     toolchains = [
         "//config:batcher_buffer_count",
         "//config:handler_stack_size",
@@ -1084,11 +1158,7 @@ cc_library(
     ],
     local_defines = [
         "SENTRY_BUILD_SHARED",
-    ] + sentry_implementation_defines(),
-    target_compatible_with = sentry_supported_platforms() + select({
-        "//config:backend_breakpad": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
+    ] + _SENTRY_IMPLEMENTATION_DEFINES,
     toolchains = [
         "//config:batcher_buffer_count",
         "//config:handler_stack_size",
@@ -1116,11 +1186,7 @@ cc_library(
     ],
     local_defines = [
         "SENTRY_BUILD_STATIC",
-    ] + sentry_implementation_defines(),
-    target_compatible_with = sentry_supported_platforms() + select({
-        "//config:backend_crashpad_or_auto_stacktrace_disabled": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
+    ] + _SENTRY_IMPLEMENTATION_DEFINES,
     toolchains = [
         "//config:batcher_buffer_count",
         "//config:handler_stack_size",
@@ -1148,11 +1214,7 @@ cc_library(
     ],
     local_defines = [
         "SENTRY_BUILD_SHARED",
-    ] + sentry_implementation_defines(),
-    target_compatible_with = sentry_supported_platforms() + select({
-        "//config:backend_crashpad_or_auto_stacktrace_disabled": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
+    ] + _SENTRY_IMPLEMENTATION_DEFINES,
     toolchains = [
         "//config:batcher_buffer_count",
         "//config:handler_stack_size",
@@ -1170,10 +1232,6 @@ cc_library(
     ],
     includes = ["src"],
     local_defines = ["SENTRY_BUILD_STATIC"],
-    target_compatible_with = sentry_supported_platforms() + select({
-        "//config:integration_qt_enabled": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
     visibility = ["//visibility:private"],
 )
 
@@ -1187,10 +1245,6 @@ cc_library(
     ],
     includes = ["src"],
     local_defines = ["SENTRY_BUILD_SHARED"],
-    target_compatible_with = sentry_supported_platforms() + select({
-        "//config:integration_qt_enabled": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
     visibility = ["//visibility:private"],
 )
 
@@ -1226,7 +1280,6 @@ printf 'extern "C" SENTRY_API const char sentry_library_info[] = "SENTRY_VERSION
   "$$version_base" "$$platform" "$$build_id" "$$build_variant" '$(COMPILATION_MODE)' \\
   >> "$@"
 """,
-    target_compatible_with = sentry_supported_platforms(),
     toolchains = [
         "//config:build_id",
         "//config:build_platform_name",
@@ -1240,7 +1293,6 @@ cc_library(
     name = "_sentry_private_headers",
     hdrs = COMMON_PRIVATE_HDRS,
     includes = ["src"],
-    target_compatible_with = sentry_supported_platforms(),
     visibility = ["//visibility:private"],
 )
 
@@ -1248,10 +1300,6 @@ cc_library(
     name = "_sentry_native_private_headers",
     hdrs = NATIVE_BACKEND_PRIVATE_HDRS + NATIVE_DAEMON_PRIVATE_HDRS,
     includes = ["src/backends/native"],
-    target_compatible_with = sentry_supported_platforms() + select({
-        "//config:backend_native": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
     visibility = ["//visibility:private"],
 )
 
@@ -1268,7 +1316,6 @@ cc_library(
     ],
     local_defines = ["SENTRY_BUILD_STATIC"],
     strip_include_prefix = "include",
-    target_compatible_with = sentry_supported_platforms(),
     visibility = ["//visibility:private"],
     alwayslink = True,
 )
@@ -1283,7 +1330,6 @@ cc_library(
     ],
     local_defines = ["SENTRY_BUILD_SHARED"],
     strip_include_prefix = "include",
-    target_compatible_with = sentry_supported_platforms(),
     visibility = ["//visibility:private"],
     alwayslink = True,
 )
@@ -1300,7 +1346,6 @@ cc_library(
         "-fvisibility=hidden",
     ],
     includes = ["src"],
-    target_compatible_with = sentry_supported_platforms(),
     textual_hdrs = ["vendor/mpack.c"],
     visibility = ["//visibility:private"],
 )
@@ -1401,7 +1446,7 @@ cc_binary(
         "//config:embed_info_enabled": ["SENTRY_EMBED_INFO=1"],
         "//conditions:default": [],
     }),
-    target_compatible_with = sentry_supported_platforms() + sentry_supported_core_configuration() + select({
+    target_compatible_with = _SENTRY_SUPPORTED_CONFIGURATION + select({
         "//config:backend_native": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
@@ -1484,7 +1529,7 @@ cc_library(
     }),
     local_defines = _SENTRY_IMPLEMENTATION_DEFINES,
     strip_include_prefix = "include",
-    target_compatible_with = sentry_supported_platforms() + sentry_supported_core_configuration(),
+    target_compatible_with = _SENTRY_SUPPORTED_CONFIGURATION,
     toolchains = [
         "//config:batcher_buffer_count",
         "//config:handler_stack_size",
@@ -1541,7 +1586,6 @@ cc_library(
     }),
     local_defines = _SENTRY_IMPLEMENTATION_DEFINES + ["SENTRY_BUILD_SHARED"],
     strip_include_prefix = "include",
-    target_compatible_with = sentry_supported_platforms() + sentry_supported_core_configuration(),
     toolchains = [
         "//config:batcher_buffer_count",
         "//config:handler_stack_size",
@@ -1563,7 +1607,7 @@ cc_shared_library(
         "@platforms//os:macos": "libsentry.dylib",
         "//conditions:default": "libsentry.so",
     }),
-    target_compatible_with = sentry_supported_platforms() + sentry_supported_core_configuration(),
+    target_compatible_with = _SENTRY_SUPPORTED_CONFIGURATION,
     user_link_flags = select({
         "@platforms//os:linux": [
             "-Wl,--build-id=sha1",
@@ -1595,7 +1639,7 @@ cc_library(
         "SENTRY_SDK_VERSION=\\\"$(SENTRY_SDK_VERSION_VALUE)\\\"",
     ],
     strip_include_prefix = "include",
-    target_compatible_with = sentry_supported_platforms() + sentry_supported_core_configuration(),
+    target_compatible_with = _SENTRY_SUPPORTED_CONFIGURATION,
     toolchains = [
         "//config:sdk_name",
         "//config:sdk_version",
@@ -1659,7 +1703,7 @@ cc_library(
     }),
     local_defines = [],
     strip_include_prefix = "",
-    target_compatible_with = sentry_supported_platforms() + sentry_supported_core_configuration(),
+    target_compatible_with = _SENTRY_SUPPORTED_CONFIGURATION,
     toolchains = [
         "//config:batcher_buffer_count",
         "//config:handler_stack_size",

@@ -7,7 +7,6 @@ exports_files([
     "crashpad_handler_sources.bzl",
     "crashpad_mig.bzl",
     "crashpad_sources.bzl",
-    "sentry.bzl",
     "sentry_sources.bzl",
 ])
 

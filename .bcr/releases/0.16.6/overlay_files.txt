@@ -15,7 +15,6 @@ bazel/crashpad_curl_runtime_anchor.c
 bazel/crashpad_handler_sources.bzl
 bazel/crashpad_mig.bzl
 bazel/crashpad_sources.bzl
-bazel/sentry.bzl
 bazel/sentry_sources.bzl
 config/BUILD.bazel
 e2e/bcr/BUILD.bazel

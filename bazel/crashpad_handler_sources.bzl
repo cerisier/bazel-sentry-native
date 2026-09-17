@@ -1,12 +1,5 @@
 """Exact snapshot, minidump, and handler manifests for Crashpad."""
 
-def crashpad_handler_supported_configuration():
-    """Rejects the unported experimental client-side stacktrace graph."""
-    return select({
-        "//config:crashpad_stacktrace_disabled": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    })
-
 CRASHPAD_SNAPSHOT_COMMON_SRCS = [
     "//:external/crashpad/snapshot/annotation_snapshot.cc",
     "//:external/crashpad/snapshot/capture_memory.cc",
