@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789666380871,
+  "lastUpdate": 1789666491250,
   "repoUrl": "https://github.com/cerisier/bazel-sentry-native",
   "entries": {
     "Linux": [
@@ -120394,6 +120394,216 @@ window.BENCHMARK_DATA = {
             "range": "logarithmic",
             "unit": "ms",
             "extra": "Min 0.018ms\nMax 0.018ms\nMean 0.018ms\nMedian 0.018ms\nCPU 0.018ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "corentin.kerisit@gmail.com",
+            "name": "Corentin Kerisit",
+            "username": "cerisier"
+          },
+          "committer": {
+            "email": "corentin.kerisit@gmail.com",
+            "name": "Corentin Kerisit",
+            "username": "cerisier"
+          },
+          "distinct": true,
+          "id": "6d65b340fed9041f8cc00d3013915644417cf988",
+          "message": "build: pin final 0.16.6 overlay",
+          "timestamp": "2026-09-17T19:25:41+02:00",
+          "tree_id": "60386a58d01a33c63d477ed3e9651ba478777752",
+          "url": "https://github.com/cerisier/bazel-sentry-native/commit/6d65b340fed9041f8cc00d3013915644417cf988"
+        },
+        "date": 1789666470916,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "SDK init (inproc)",
+            "value": 3.5890829999516427,
+            "range": "logarithmic",
+            "unit": "ms",
+            "extra": "Min 3.317ms\nMax 3.936ms\nMean 3.637ms\nStdDev 0.271ms\nMedian 3.589ms\nCPU 1.939ms"
+          },
+          {
+            "name": "SDK init (breakpad)",
+            "value": 3.821042000026864,
+            "range": "logarithmic",
+            "unit": "ms",
+            "extra": "Min 3.736ms\nMax 6.190ms\nMean 4.273ms\nStdDev 1.072ms\nMedian 3.821ms\nCPU 2.403ms"
+          },
+          {
+            "name": "SDK init (crashpad)",
+            "value": 14.23395899996649,
+            "range": "logarithmic",
+            "unit": "ms",
+            "extra": "Min 13.449ms\nMax 16.507ms\nMean 14.721ms\nStdDev 1.393ms\nMedian 14.234ms\nCPU 5.160ms"
+          },
+          {
+            "name": "SDK init (native)",
+            "value": 13.74012499991295,
+            "range": "logarithmic",
+            "unit": "ms",
+            "extra": "Min 10.393ms\nMax 27.547ms\nMean 15.590ms\nStdDev 6.907ms\nMedian 13.740ms\nCPU 4.910ms"
+          },
+          {
+            "name": "Backend startup (inproc)",
+            "value": 0.0697079999554262,
+            "range": "logarithmic",
+            "unit": "ms",
+            "extra": "Min 0.057ms\nMax 0.201ms\nMean 0.101ms\nStdDev 0.059ms\nMedian 0.070ms\nCPU 0.065ms"
+          },
+          {
+            "name": "Backend startup (breakpad)",
+            "value": 0.260500000194952,
+            "range": "logarithmic",
+            "unit": "ms",
+            "extra": "Min 0.198ms\nMax 0.374ms\nMean 0.287ms\nStdDev 0.079ms\nMedian 0.261ms\nCPU 0.287ms"
+          },
+          {
+            "name": "Backend startup (crashpad)",
+            "value": 9.77437500000633,
+            "range": "logarithmic",
+            "unit": "ms",
+            "extra": "Min 7.029ms\nMax 10.862ms\nMean 9.118ms\nStdDev 1.677ms\nMedian 9.774ms\nCPU 1.266ms"
+          },
+          {
+            "name": "Backend startup (native)",
+            "value": 7.991500000116503,
+            "range": "logarithmic",
+            "unit": "ms",
+            "extra": "Min 5.450ms\nMax 10.663ms\nMean 7.753ms\nStdDev 2.033ms\nMedian 7.992ms\nCPU 0.954ms"
+          },
+          {
+            "name": "Scope set_tag (inproc)",
+            "value": 0.002791082999920036,
+            "range": "logarithmic",
+            "unit": "ms",
+            "extra": "Min 0.003ms\nMax 0.003ms\nMean 0.003ms\nMedian 0.003ms\nCPU 0.003ms"
+          },
+          {
+            "name": "Scope add_breadcrumb (inproc)",
+            "value": 0.0011823329998605914,
+            "range": "logarithmic",
+            "unit": "ms",
+            "extra": "Min 0.001ms\nMax 0.001ms\nMean 0.001ms\nMedian 0.001ms\nCPU 0.001ms"
+          },
+          {
+            "name": "Scope set_tag (breakpad)",
+            "value": 0.00261850000015329,
+            "range": "logarithmic",
+            "unit": "ms",
+            "extra": "Min 0.003ms\nMax 0.003ms\nMean 0.003ms\nMedian 0.003ms\nCPU 0.003ms"
+          },
+          {
+            "name": "Scope add_breadcrumb (breakpad)",
+            "value": 0.0011081669999839505,
+            "range": "logarithmic",
+            "unit": "ms",
+            "extra": "Min 0.001ms\nMax 0.001ms\nMean 0.001ms\nMedian 0.001ms\nCPU 0.001ms"
+          },
+          {
+            "name": "Scope set_tag (crashpad)",
+            "value": 0.166500416999952,
+            "range": "logarithmic",
+            "unit": "ms",
+            "extra": "Min 0.167ms\nMax 0.167ms\nMean 0.167ms\nMedian 0.167ms\nCPU 0.151ms"
+          },
+          {
+            "name": "Scope add_breadcrumb (crashpad)",
+            "value": 0.04016670900000463,
+            "range": "logarithmic",
+            "unit": "ms",
+            "extra": "Min 0.040ms\nMax 0.040ms\nMean 0.040ms\nMedian 0.040ms\nCPU 0.028ms"
+          },
+          {
+            "name": "Scope set_tag (native)",
+            "value": 0.2126426250001714,
+            "range": "logarithmic",
+            "unit": "ms",
+            "extra": "Min 0.213ms\nMax 0.213ms\nMean 0.213ms\nMedian 0.213ms\nCPU 0.175ms"
+          },
+          {
+            "name": "Scope add_breadcrumb (native)",
+            "value": 0.06438254199997573,
+            "range": "logarithmic",
+            "unit": "ms",
+            "extra": "Min 0.064ms\nMax 0.064ms\nMean 0.064ms\nMedian 0.064ms\nCPU 0.044ms"
+          },
+          {
+            "name": "Logs (1 thread)",
+            "value": 0.004150839999965683,
+            "range": "logarithmic",
+            "unit": "ms",
+            "extra": "Min 0.004ms\nMax 0.004ms\nMean 0.004ms\nMedian 0.004ms\nCPU 0.004ms"
+          },
+          {
+            "name": "Logs (8 threads)",
+            "value": 0.08247755250067712,
+            "range": "logarithmic",
+            "unit": "ms",
+            "extra": "Min 0.082ms\nMax 0.082ms\nMean 0.082ms\nMedian 0.082ms\nCPU 0.021ms"
+          },
+          {
+            "name": "Logs (16 threads)",
+            "value": 0.11104994749985053,
+            "range": "logarithmic",
+            "unit": "ms",
+            "extra": "Min 0.111ms\nMax 0.111ms\nMean 0.111ms\nMedian 0.111ms\nCPU 0.012ms"
+          },
+          {
+            "name": "Logs (32 threads)",
+            "value": 0.32913593843723277,
+            "range": "logarithmic",
+            "unit": "ms",
+            "extra": "Min 0.329ms\nMax 0.329ms\nMean 0.329ms\nMedian 0.329ms\nCPU 0.023ms"
+          },
+          {
+            "name": "Library size (inproc)",
+            "value": 390512,
+            "range": "linear",
+            "unit": "bytes",
+            "extra": "Size 390512b"
+          },
+          {
+            "name": "Library size (breakpad)",
+            "value": 475072,
+            "range": "linear",
+            "unit": "bytes",
+            "extra": "Size 475072b"
+          },
+          {
+            "name": "Library size (crashpad)",
+            "value": 791200,
+            "range": "linear",
+            "unit": "bytes",
+            "extra": "Size 791200b"
+          },
+          {
+            "name": "Library size (native)",
+            "value": 408928,
+            "range": "linear",
+            "unit": "bytes",
+            "extra": "Size 408928b"
+          },
+          {
+            "name": "Stack usage (inproc)",
+            "value": 9208,
+            "unit": "bytes",
+            "extra": "Peak 9208b, Segments 2"
+          },
+          {
+            "name": "Stack usage (breakpad)",
+            "value": 8072,
+            "unit": "bytes",
+            "extra": "Peak 8072b, Segments 1"
+          },
+          {
+            "name": "Stack usage (native)",
+            "value": 5320,
+            "unit": "bytes",
+            "extra": "Peak 5320b, Segments 1"
           }
         ]
       }
