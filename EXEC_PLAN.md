@@ -993,7 +993,7 @@ Verification:
 ### Publication-layout hardening report
 
 - Removed the checked-in `bcr/modules/sentry_native` publication copy. Canonical Bazel files now exist only at their source-checkout paths; generated module metadata, `MODULE.bazel`, `source.json`, overlay copies, and integrity values exist only in the target BCR checkout.
-- Retained only compact, versioned inputs under `.bcr/releases/0.16.6`: the release descriptor, explicit 50-file manifest, and presubmit configuration. The descriptor pins overlay commit `25a2bdaa62d58fd6c7dfbfc2a96d8caf61e91015` as well as the upstream tag, commit, and official archive identity.
+- Retained only compact, versioned inputs under `.bcr/releases/0.16.6`: the release descriptor, explicit 50-file manifest, and presubmit configuration. The descriptor pins overlay commit `aebebde9234de56c6b0111fe11496ee15aa7f4b4` as well as the upstream tag, commit, and official archive identity.
 - Replaced staging synchronization/export scripts with `tools/bcr/prepare_entry.sh`. It extracts `MODULE.bazel` and every manifest-selected file from the pinned commit, merges module metadata without discarding BCR-owned version history, invokes the official integrity updater, and verifies the resulting archive identity and overlay boundary.
 - Updated CI so validation generates the entry in a fresh official BCR checkout. The publication job downloads that validated module artifact and commits those exact bytes instead of regenerating them independently.
 - Corrected the `publish-to-bcr` finding: it can target the official getsentry archive URL. The current incompatibility is its requirement that `MODULE.bazel` already be present in the archive and its lack of BCR overlay support.
