@@ -199,58 +199,58 @@ label_flag(
 ]
 
 selects.config_setting_group(
-    name = "transport_curl_link_curl_auto",
-    match_all = [
-        ":transport_curl",
-        ":link_curl_auto",
-    ],
-)
-
-selects.config_setting_group(
-    name = "transport_curl_link_curl_off",
-    match_all = [
-        ":transport_curl",
-        ":link_curl_off",
-    ],
-)
-
-selects.config_setting_group(
-    name = "transport_curl_link_curl_on",
-    match_all = [
-        ":transport_curl",
-        ":link_curl_on",
-    ],
-)
-
-selects.config_setting_group(
-    name = "transport_auto_link_curl_auto",
-    match_all = [
-        ":transport_auto",
-        ":link_curl_auto",
-    ],
-)
-
-selects.config_setting_group(
-    name = "transport_auto_link_curl_off",
-    match_all = [
-        ":transport_auto",
-        ":link_curl_off",
-    ],
-)
-
-selects.config_setting_group(
-    name = "transport_auto_link_curl_on",
-    match_all = [
-        ":transport_auto",
-        ":link_curl_on",
-    ],
-)
-
-selects.config_setting_group(
     name = "transport_curl_enabled",
     match_any = [
         ":transport_auto",
         ":transport_curl",
+    ],
+)
+
+selects.config_setting_group(
+    name = "link_curl_auto_or_on",
+    match_any = [
+        ":link_curl_auto",
+        ":link_curl_on",
+    ],
+)
+
+selects.config_setting_group(
+    name = "link_curl_auto_or_off",
+    match_any = [
+        ":link_curl_auto",
+        ":link_curl_off",
+    ],
+)
+
+selects.config_setting_group(
+    name = "sentry_curl_linked",
+    match_all = [
+        ":transport_curl_enabled",
+        ":link_curl_auto_or_on",
+    ],
+)
+
+selects.config_setting_group(
+    name = "sentry_curl_runtime_loaded",
+    match_all = [
+        ":transport_curl_enabled",
+        ":link_curl_off",
+    ],
+)
+
+selects.config_setting_group(
+    name = "sentry_crash_curl_linked",
+    match_all = [
+        ":transport_curl_enabled",
+        ":link_curl_on",
+    ],
+)
+
+selects.config_setting_group(
+    name = "sentry_crash_curl_runtime_loaded",
+    match_all = [
+        ":transport_curl_enabled",
+        ":link_curl_auto_or_off",
     ],
 )
 

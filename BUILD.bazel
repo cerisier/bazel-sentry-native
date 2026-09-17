@@ -819,10 +819,7 @@ _SENTRY_IMPLEMENTATION_DEFINES = [
     "//config:screenshot_none": ["SENTRY_SCREENSHOT_NONE"],
     "//conditions:default": [],
 }) + select({
-    "//config:transport_auto_link_curl_auto": ["SENTRY_LINK_CURL"],
-    "//config:transport_auto_link_curl_on": ["SENTRY_LINK_CURL"],
-    "//config:transport_curl_link_curl_auto": ["SENTRY_LINK_CURL"],
-    "//config:transport_curl_link_curl_on": ["SENTRY_LINK_CURL"],
+    "//config:sentry_curl_linked": ["SENTRY_LINK_CURL"],
     "//conditions:default": [],
 }) + select({
     "//config:transport_compression_enabled": ["SENTRY_TRANSPORT_COMPRESSION"],
@@ -850,12 +847,8 @@ _SENTRY_STATIC_LINK_DEPS = [":_sentry_mpack"] + select({
     "//config:backend_custom": ["//config:custom_backend"],
     "//conditions:default": [],
 }) + select({
-    "//config:transport_auto_link_curl_auto": ["@curl//:curl"],
-    "//config:transport_auto_link_curl_off": ["@curl//:curl_shared_lib_headers"],
-    "//config:transport_auto_link_curl_on": ["@curl//:curl"],
-    "//config:transport_curl_link_curl_auto": ["@curl//:curl"],
-    "//config:transport_curl_link_curl_off": ["@curl//:curl_shared_lib_headers"],
-    "//config:transport_curl_link_curl_on": ["@curl//:curl"],
+    "//config:sentry_curl_linked": ["@curl//:curl"],
+    "//config:sentry_curl_runtime_loaded": ["@curl//:curl_shared_lib_headers"],
     "//conditions:default": [],
 }) + select({
     "//config:transport_compression_enabled": ["@zlib//:zlib"],
@@ -886,12 +879,8 @@ _SENTRY_SHARED_LINK_DEPS = [":_sentry_mpack"] + select({
     "//config:backend_custom": ["//config:custom_backend"],
     "//conditions:default": [],
 }) + select({
-    "//config:transport_auto_link_curl_auto": ["@curl//:curl"],
-    "//config:transport_auto_link_curl_off": ["@curl//:curl_shared_lib_headers"],
-    "//config:transport_auto_link_curl_on": ["@curl//:curl"],
-    "//config:transport_curl_link_curl_auto": ["@curl//:curl"],
-    "//config:transport_curl_link_curl_off": ["@curl//:curl_shared_lib_headers"],
-    "//config:transport_curl_link_curl_on": ["@curl//:curl"],
+    "//config:sentry_curl_linked": ["@curl//:curl"],
+    "//config:sentry_curl_runtime_loaded": ["@curl//:curl_shared_lib_headers"],
     "//conditions:default": [],
 }) + select({
     "//config:transport_compression_enabled": ["@zlib//:zlib"],
@@ -1270,8 +1259,7 @@ cc_binary(
         "//config:screenshot_none": ["SENTRY_SCREENSHOT_NONE"],
         "//conditions:default": [],
     }) + select({
-        "//config:transport_auto_link_curl_on": ["SENTRY_LINK_CURL"],
-        "//config:transport_curl_link_curl_on": ["SENTRY_LINK_CURL"],
+        "//config:sentry_crash_curl_linked": ["SENTRY_LINK_CURL"],
         "//conditions:default": [],
     }) + select({
         "//config:transport_compression_enabled": ["SENTRY_TRANSPORT_COMPRESSION"],
@@ -1298,12 +1286,8 @@ cc_binary(
         "@platforms//os:linux": ["//vendor/libunwind:unwind_remote"],
         "//conditions:default": [],
     }) + select({
-        "//config:transport_auto_link_curl_auto": ["@curl//:curl_shared_lib_headers"],
-        "//config:transport_auto_link_curl_off": ["@curl//:curl_shared_lib_headers"],
-        "//config:transport_auto_link_curl_on": ["@curl"],
-        "//config:transport_curl_link_curl_auto": ["@curl//:curl_shared_lib_headers"],
-        "//config:transport_curl_link_curl_off": ["@curl//:curl_shared_lib_headers"],
-        "//config:transport_curl_link_curl_on": ["@curl"],
+        "//config:sentry_crash_curl_linked": ["@curl"],
+        "//config:sentry_crash_curl_runtime_loaded": ["@curl//:curl_shared_lib_headers"],
         "//conditions:default": [],
     }) + select({
         "//config:transport_compression_enabled": ["@zlib"],
