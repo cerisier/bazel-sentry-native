@@ -9,7 +9,6 @@ exports_files([
     "crashpad_sources.bzl",
     "sentry.bzl",
     "sentry_sources.bzl",
-    "upstream_manifest.bzl",
 ])
 
 cc_library(

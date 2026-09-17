@@ -17,7 +17,6 @@ bazel/crashpad_mig.bzl
 bazel/crashpad_sources.bzl
 bazel/sentry.bzl
 bazel/sentry_sources.bzl
-bazel/upstream_manifest.bzl
 config/BUILD.bazel
 e2e/bcr/BUILD.bazel
 e2e/bcr/MODULE.bazel
