@@ -726,7 +726,7 @@ cc_library(
 )
 
 cc_binary(
-    name = "_crashpad_handler",
+    name = "crashpad_handler",
     srcs = ["external/crashpad/handler/main.cc"] + select({
         "@platforms//os:linux": ["external/crashpad/client/pthread_create_linux.cc"],
         "//conditions:default": [],
@@ -737,7 +737,7 @@ cc_binary(
         "//config:crashpad_stacktrace_disabled": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
-    visibility = ["//:__pkg__"],
+    visibility = ["//visibility:public"],
     deps = [
         ":crashpad_client",
         ":crashpad_getopt",
@@ -903,12 +903,6 @@ _SENTRY_PRIVATE_HEADER_DEPS = [":_sentry_private_headers"] + select({
     "//config:backend_native": [":_sentry_native_private_headers"],
     "//conditions:default": [],
 })
-
-alias(
-    name = "crashpad_handler",
-    actual = ":_crashpad_handler",
-    visibility = ["//visibility:public"],
-)
 
 alias(
     name = "sentry_crash",
