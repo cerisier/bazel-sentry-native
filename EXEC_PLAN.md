@@ -24,7 +24,8 @@ The development build and test matrix uses `@llvm` as a Bzlmod development depen
 - Milestone 8 is in progress: the root and isolated graphs are integrated, Linux/macOS runtime gates are substantially complete, and the BCR contribution is staged and registry-validated. The checked-in consumer's literal-default static/shared Crashpad tests pass with Bazel 8.4.2 and 9.2.0 on remote Linux x86_64 and with Bazel 9.2.0 on remote Linux aarch64; Bazel 8.4.2 also passes the literal defaults on native macOS arm64 using consumer-owned `@llvm`. Native static/shared processing with embedded metadata passes on remote Linux x86_64/aarch64 and native macOS arm64. A native macOS x86_64 runner and the native BCR Linux arm64 Breakpad lane remain publication gates.
 - Embedded metadata now uses a native `genrule` fed by plain Skylib settings through Make variables. The earlier generator and setting-validation rules are removed, and `SENTRY_EMBED_INFO_ITEMS` is deferred.
 - Compatibility ownership is simplified: supported-platform and supported-setting checks live on public/top-level entry targets, while genuinely Linux-only or macOS-only implementation targets retain their own constraints. Generic private helpers inherit incompatibility through their owning graph. The accepted-but-deferred WinHTTP, pshttp, Windows screenshot, and Crashpad stacktrace settings remain incompatible rather than silently selecting empty source sets.
-- Repository/publication hardening is implemented: every Bazel-owned Breakpad/Crashpad file lives outside Git-submodule paths. All ordinary target declarations appear explicitly in the superproject's root `BUILD.bazel`; `.bzl` files retain only source manifests, pure attribute helpers, and genuine custom rule implementations. The documented public labels are unchanged, and an explicit manifest selects the 48-file BCR overlay from a pinned fork commit.
+- Breakpad source/header groups now live in `bazel/breakpad_sources.bzl`, parallel to the Sentry and Crashpad manifests; the root `BUILD.bazel` retains only the Breakpad target declarations and platform selection.
+- Repository/publication hardening is implemented: every Bazel-owned Breakpad/Crashpad file lives outside Git-submodule paths. All ordinary target declarations appear explicitly in the superproject's root `BUILD.bazel`; `.bzl` files retain only source manifests, pure attribute helpers, and genuine custom rule implementations. The documented public labels are unchanged, and an explicit manifest selects the 49-file BCR overlay from a pinned fork commit.
 - Reproducible publication infrastructure is split between versioned `.bcr/releases/<version>/` configuration and `tools/bcr/` automation. It generates the registry entry directly in an official BCR checkout, computes integrity with official tooling, validates/materializes the entry, tests the exact consumer, and passes the validated bytes to an opt-in pull-request job. No generated registry subtree is checked into this fork.
 - Upstream inspection used `getsentry/sentry-native` release `0.16.6` and current `master` commit `0d5bec47307cba89af85525d0d1bd7fbf799c8cd` on 2026-09-16.
 
@@ -735,6 +736,7 @@ Mitigation: make compatibility tiers explicit in documentation and metadata. Add
 - 2026-09-16: Preserve Crashpad's Linux runtime-loaded curl API while replacing its ambient system-library assumption with a private BCR `curl_shared` runtime. Keep `crashpad_util` header-only with respect to curl so the handler does not embed a second static curl implementation.
 - 2026-09-17: Model Crashpad's libc/SDK shadow include roots with private header-only native `cc_library` targets and virtual include trees rather than `cc_library.includes`. This preserves `#include_next` precedence on Bazel 8 and 9 without a custom provider. Bazel normalizes the reserved physical `external/crashpad/...` source path in external-module topology but not in the root checkout, so a pure helper selects `external/crashpad/compat/...` for the root and `compat/...` for a consumer repository.
 - 2026-09-17: Inline root-only Sentry attribute values in the root `BUILD.bazel` and remove `bazel/sentry.bzl`. Keep compatibility policy on public/top-level graph boundaries and explicit Linux-only/macOS-only targets; let generic private helpers inherit incompatibility transitively. Retain accepted values for deferred knobs and reject unsupported combinations at the public boundary.
+- 2026-09-17: Keep Breakpad target declarations explicit in the root package, but move its CMake-derived source/header groups to `bazel/breakpad_sources.bzl` to match the Sentry and Crashpad manifest structure.
 - 2026-09-16: Wrap each private macOS `objc_library` output in a `cc_import` archive adapter so Bazel 8 `cc_shared_library` sees the Objective-C++ linker inputs; retain Objective-C++ compilation and framework ownership in the original rules.
 - 2026-09-16: Make the BCR e2e module own LLVM `0.8.21` as a development dependency, including macOS SDK projection and toolchain registration. Production sentry-native targets remain independent of `@llvm`; every root consumer chooses and registers its own toolchain.
 - 2026-09-16: Use rules_cc target libc constraints to publish Linux glibc plus macOS only. Defer musl and reject it at analysis until it has its own verified contract.
@@ -948,7 +950,7 @@ Verification:
 Implemented:
 
 - Explicit root `BUILD.bazel` declarations for the Breakpad, Crashpad, and Sentry graphs. No target-declaration-only macro or Bazel-owned file below either submodule path remains, while `//:sentry`, `//:sentry_shared`, `//:sentry_shared_library`, `//:crashpad_handler`, and `//:sentry_crash` remain stable.
-- Small BCR publication inputs under `.bcr/`: a metadata template plus versioned presubmit configuration, explicit 48-file manifest, and immutable release descriptor. The complete module entry is generated only in an official BCR checkout.
+- Small BCR publication inputs under `.bcr/`: a metadata template plus versioned presubmit configuration, explicit 49-file manifest, and immutable release descriptor. The complete module entry is generated only in an official BCR checkout.
 - Archive provenance against the official `sentry-native.zip`: SHA-256 `d35145daaafddc50c0c87ec564acf0ba9968e67b23981e7f57c702b2dd6f2ff1`, no `strip_prefix`, and per-overlay SRI values generated by the official BCR integrity tool.
 - Presubmit coverage for Bazel 8.x/9.x minimal public targets on Linux/macOS x86_64/aarch64; Bazel 9 Breakpad, Crashpad, and native backend artifact tests on all four desktop architecture runners; Linux-only anonymous Bazel 8 Crashpad/default lanes; and Bazel 8/9 static/shared Crashpad consumer tests. The LLVM-owning `bcr_test_module` supplies the Bazel 8 macOS default lane because anonymous modules cannot inherit a dependency's development toolchain.
 - A shared-library Crashpad smoke consumer in `e2e/bcr`, complementing the existing static consumer.
@@ -995,14 +997,14 @@ Verification:
 ### Publication-layout hardening report
 
 - Removed the checked-in `bcr/modules/sentry_native` publication copy. Canonical Bazel files now exist only at their source-checkout paths; generated module metadata, `MODULE.bazel`, `source.json`, overlay copies, and integrity values exist only in the target BCR checkout.
-- Retained only compact, versioned inputs under `.bcr/releases/0.16.6`: the release descriptor, explicit 48-file manifest, and presubmit configuration. The descriptor pins the exact overlay commit as well as the upstream tag, commit, and official archive identity.
+- Retained only compact, versioned inputs under `.bcr/releases/0.16.6`: the release descriptor, explicit 49-file manifest, and presubmit configuration. The descriptor pins the exact overlay commit as well as the upstream tag, commit, and official archive identity.
 - Replaced staging synchronization/export scripts with `tools/bcr/prepare_entry.sh`. It extracts `MODULE.bazel` and every manifest-selected file from the pinned commit, merges module metadata without discarding BCR-owned version history, invokes the official integrity updater, and verifies the resulting archive identity and overlay boundary.
 - Updated CI so validation generates the entry in a fresh official BCR checkout. The publication job downloads that validated module artifact and commits those exact bytes instead of regenerating them independently.
 - Corrected the `publish-to-bcr` finding: it can target the official getsentry archive URL. The current incompatibility is its requirement that `MODULE.bazel` already be present in the archive and its lack of BCR overlay support.
 
 Verification:
 
-- `tools/bcr/verify_release.sh 0.16.6` reports exactly the 48 files pinned to the overlay commit.
+- `tools/bcr/verify_release.sh 0.16.6` reports exactly the 49 files pinned to the overlay commit.
 - Generation against a fresh current BCR checkout produced a module subtree byte-for-byte identical to the former checked-in entry, including `source.json` and every computed SRI value.
 - Current official `bcr_validation` passed source URL, archive integrity, overlay/module assembly, metadata identity, and presubmit syntax; only the expected first-version maintainer review remained. Current `setup_presubmit_repos` successfully materialized both official consumer repositories.
 - A subsequent native macOS runtime invocation reached analysis and compilation but the host exhausted disk space while rebuilding LLVM. This was an environment failure after the generated-entry equivalence and official validation checks; the identical former entry's Bazel 8/9 runtime results remain recorded above.
@@ -1046,6 +1048,20 @@ Verification:
 - On the explicit LLVM macOS arm64 platform, configured queries resolve `libsentry.a`, `libsentry.dylib`, the Crashpad handler, and the native crash daemon.
 - Configured queries return no compatible public output for WinHTTP, Windows screenshots, Crashpad stacktraces, or LLVM musl.
 - Action-query resolves 2,584 static and 2,586 shared actions for the default supported macOS arm64 graph. Per the cleanup policy, no compile or runtime test matrix was repeated.
+
+### Breakpad source-manifest extraction report
+
+Implemented:
+
+- Added `bazel/breakpad_sources.bzl` with the exact common, Linux, Apple/macOS, client, and header groups derived from `external/CMakeLists.txt`.
+- Kept `breakpad_client`, its platform selection, LSS ownership, Objective-C++ adapter, and compatibility constraints explicit in the root `BUILD.bazel`.
+- Added the manifest to the BCR overlay, returning the release overlay from 48 to 49 files.
+
+Verification:
+
+- Buildifier and root-package loading pass.
+- A normalized multiset comparison between the former inline block and the extracted manifest has no source/header differences.
+- Per the cleanup policy, no compile or runtime tests were repeated.
 
 On final completion, also record:
 

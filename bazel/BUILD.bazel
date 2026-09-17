@@ -2,6 +2,7 @@ load("@rules_cc//cc:cc_library.bzl", "cc_library")
 
 exports_files([
     "adjacent_executable.bzl",
+    "breakpad_sources.bzl",
     "crashpad_client_link_test.cc",
     "crashpad_curl_runtime_anchor.c",
     "crashpad_handler_sources.bzl",

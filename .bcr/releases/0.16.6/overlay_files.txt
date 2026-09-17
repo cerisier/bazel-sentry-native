@@ -10,6 +10,7 @@ bazel/apple_mig/migcom/parser.c
 bazel/apple_mig/migcom/parser.h
 bazel/apple_mig/regenerate_migcom_parser.sh
 bazel/breakpad_include/CoreServices/CoreServices.h
+bazel/breakpad_sources.bzl
 bazel/crashpad_client_link_test.cc
 bazel/crashpad_curl_runtime_anchor.c
 bazel/crashpad_handler_sources.bzl
