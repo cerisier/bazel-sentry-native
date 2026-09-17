@@ -1,14 +1,12 @@
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 
 exports_files([
-    "sentry_macos.exports",
     "adjacent_executable.bzl",
     "crashpad_client_link_test.cc",
     "crashpad_curl_runtime_anchor.c",
     "crashpad_handler_sources.bzl",
     "crashpad_mig.bzl",
     "crashpad_sources.bzl",
-    "embedded_info.bzl",
     "sentry.bzl",
     "sentry_sources.bzl",
     "upstream_manifest.bzl",

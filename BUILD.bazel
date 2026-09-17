@@ -57,7 +57,6 @@ load(
     "crashpad_copts",
     "crashpad_supported_platforms",
 )
-load("//bazel:embedded_info.bzl", "sentry_embedded_info")
 load(
     "//bazel:sentry.bzl",
     "sentry_implementation_defines",
@@ -1163,9 +1162,45 @@ cc_library(
     visibility = ["//visibility:private"],
 )
 
-sentry_embedded_info(
+genrule(
     name = "_sentry_embedded_info",
+    outs = ["_sentry_embedded_info.cpp"],
+    cmd = """
+set -eu
+sdk_version='$(SENTRY_SDK_VERSION_VALUE)'
+version_base="$${sdk_version%%[-+]*}"
+platform='$(SENTRY_BUILD_PLATFORM_NAME_VALUE)'
+if [ -z "$$platform" ]; then
+  platform='""" + select({
+        "@platforms//os:linux": "Linux",
+        "@platforms//os:macos": "Darwin",
+        "//conditions:default": "",
+    }) + """'
+fi
+build_id='$(SENTRY_BUILD_ID_VALUE)'
+if [ -z "$$build_id" ]; then
+  case "$$sdk_version" in
+    "$$version_base"+*) build_id="$${sdk_version#*+}" ;;
+    *) build_id='unstamped' ;;
+  esac
+fi
+build_variant='$(SENTRY_BUILD_VARIANT_VALUE)'
+printf '%s\n' \\
+  '#include "sentry.h"' \\
+  '' \\
+  'extern "C" SENTRY_API const char sentry_library_info[];' \\
+  > "$@"
+printf 'extern "C" SENTRY_API const char sentry_library_info[] = "SENTRY_VERSION:%s;PLATFORM:%s;BUILD:%s;VARIANT:%s;CONFIG:%s;END";\n' \\
+  "$$version_base" "$$platform" "$$build_id" "$$build_variant" '$(COMPILATION_MODE)' \\
+  >> "$@"
+""",
     target_compatible_with = sentry_supported_platforms(),
+    toolchains = [
+        "//config:build_id",
+        "//config:build_platform_name",
+        "//config:build_variant",
+        "//config:sdk_version",
+    ],
     visibility = ["//visibility:private"],
 )
 
@@ -1340,7 +1375,6 @@ cc_binary(
     }),
     toolchains = [
         "//config:batcher_buffer_count",
-        "//config:embed_info_items",
         "//config:handler_stack_size",
         "//config:sdk_name",
         "//config:sdk_version",
@@ -1421,7 +1455,6 @@ cc_library(
     target_compatible_with = sentry_supported_platforms() + sentry_supported_core_configuration(),
     toolchains = [
         "//config:batcher_buffer_count",
-        "//config:embed_info_items",
         "//config:handler_stack_size",
         "//config:sdk_name",
         "//config:sdk_version",
@@ -1479,7 +1512,6 @@ cc_library(
     target_compatible_with = sentry_supported_platforms() + sentry_supported_core_configuration(),
     toolchains = [
         "//config:batcher_buffer_count",
-        "//config:embed_info_items",
         "//config:handler_stack_size",
         "//config:sdk_name",
         "//config:sdk_version",
@@ -1492,7 +1524,6 @@ cc_shared_library(
     name = "sentry_shared",
     additional_linker_inputs = select({
         "@platforms//os:linux": ["src/exports.map"],
-        "@platforms//os:macos": ["//bazel:sentry_macos.exports"],
         "//conditions:default": [],
     }),
     shared_lib_name = select({
@@ -1508,11 +1539,7 @@ cc_shared_library(
         ],
         "@platforms//os:macos": [
             "-Wl,-dead_strip_dylibs",
-            "-Wl,-exported_symbols_list,$(location //bazel:sentry_macos.exports)",
         ],
-        "//conditions:default": [],
-    }) + select({
-        "//config:macos_embed_info_enabled": ["-Wl,-exported_symbol,_sentry_library_info"],
         "//conditions:default": [],
     }),
     visibility = ["//visibility:public"],
@@ -1603,7 +1630,6 @@ cc_library(
     target_compatible_with = sentry_supported_platforms() + sentry_supported_core_configuration(),
     toolchains = [
         "//config:batcher_buffer_count",
-        "//config:embed_info_items",
         "//config:handler_stack_size",
         "//config:sdk_name",
         "//config:sdk_version",

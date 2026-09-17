@@ -1,6 +1,5 @@
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "int_flag", "string_flag")
-load(":settings.bzl", "bounded_int_flag", "c_string_flag", "embed_info_items_flag")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -77,19 +76,16 @@ bool_flag(
     build_setting_default = False,
 )
 
-c_string_flag(
+string_flag(
     name = "sdk_name",
-    build_setting_default = "",
+    build_setting_default = "sentry.native",
     make_variable = "SENTRY_SDK_NAME_VALUE",
-    value_if_empty = "sentry.native",
 )
 
-c_string_flag(
+string_flag(
     name = "sdk_version",
-    build_setting_default = "",
+    build_setting_default = "0.16.6",
     make_variable = "SENTRY_SDK_VERSION_VALUE",
-    require_semver = True,
-    value_if_empty = "0.16.6",
 )
 
 int_flag(
@@ -98,32 +94,28 @@ int_flag(
     make_variable = "SENTRY_HANDLER_STACK_SIZE_VALUE",
 )
 
-bounded_int_flag(
+int_flag(
     name = "batcher_buffer_count",
     build_setting_default = 3,
     make_variable = "SENTRY_BATCHER_BUFFER_COUNT_VALUE",
-    maximum = 10,
-    minimum = 2,
 )
 
 string_flag(
     name = "build_platform_name",
     build_setting_default = "",
+    make_variable = "SENTRY_BUILD_PLATFORM_NAME_VALUE",
 )
 
 string_flag(
     name = "build_variant",
     build_setting_default = "",
+    make_variable = "SENTRY_BUILD_VARIANT_VALUE",
 )
 
 string_flag(
     name = "build_id",
     build_setting_default = "",
-)
-
-embed_info_items_flag(
-    name = "embed_info_items",
-    build_setting_default = "",
+    make_variable = "SENTRY_BUILD_ID_VALUE",
 )
 
 string_flag(

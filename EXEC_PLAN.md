@@ -22,7 +22,8 @@ The development build and test matrix uses `@llvm` as a Bzlmod development depen
 - Milestone 6 is complete: `//:sentry_crash`, Linux remote unwinding, exact daemon/library manifests, and real static/shared crash-artifact processing pass on native macOS arm64 and remote Linux x86_64/aarch64. macOS x86_64 cross-build and artifact inspection pass.
 - Milestone 7 is complete: `//:sentry_shared` produces the deployable shared artifact and `//:sentry_shared_library` provides the rules_cc consumer edge. Static and shared compilation roots, public exports, runtime companion propagation, dynamic metadata, and isolated-consumer behavior are verified. Private implementation include roots no longer propagate to ordinary consumers.
 - Milestone 8 is in progress: the root and isolated graphs are integrated, Linux/macOS runtime gates are substantially complete, and the BCR contribution is staged and registry-validated. The checked-in consumer's literal-default static/shared Crashpad tests pass with Bazel 8.4.2 and 9.2.0 on remote Linux x86_64 and with Bazel 9.2.0 on remote Linux aarch64; Bazel 8.4.2 also passes the literal defaults on native macOS arm64 using consumer-owned `@llvm`. Native static/shared processing with embedded metadata passes on remote Linux x86_64/aarch64 and native macOS arm64. A native macOS x86_64 runner and the native BCR Linux arm64 Breakpad lane remain publication gates.
-- Repository/publication hardening is implemented: every Bazel-owned Breakpad/Crashpad file lives outside Git-submodule paths. All ordinary target declarations appear explicitly in the superproject's root `BUILD.bazel`; `.bzl` files retain only source manifests, pure attribute helpers, and genuine custom rule implementations. The documented public labels are unchanged, and an explicit manifest selects the 53-file BCR overlay from a pinned fork commit.
+- Embedded metadata now uses a native `genrule` fed by plain Skylib settings through Make variables. The earlier generator and setting-validation rules are removed, and `SENTRY_EMBED_INFO_ITEMS` is deferred.
+- Repository/publication hardening is implemented: every Bazel-owned Breakpad/Crashpad file lives outside Git-submodule paths. All ordinary target declarations appear explicitly in the superproject's root `BUILD.bazel`; `.bzl` files retain only source manifests, pure attribute helpers, and genuine custom rule implementations. The documented public labels are unchanged, and an explicit manifest selects the 51-file BCR overlay from a pinned fork commit.
 - Reproducible publication infrastructure is split between versioned `.bcr/releases/<version>/` configuration and `tools/bcr/` automation. It generates the registry entry directly in an official BCR checkout, computes integrity with official tooling, validates/materializes the entry, tests the exact consumer, and passes the validated bytes to an opt-in pull-request job. No generated registry subtree is checked into this fork.
 - Upstream inspection used `getsentry/sentry-native` release `0.16.6` and current `master` commit `0d5bec47307cba89af85525d0d1bd7fbf799c8cd` on 2026-09-16.
 
@@ -228,7 +229,6 @@ MODULE.bazel
 BUILD.bazel
 build_defs/
   BUILD.bazel
-  settings.bzl
   validation.bzl
 config/
   BUILD.bazel
@@ -290,19 +290,21 @@ Defaults use `auto` where upstream chooses according to the target platform. A c
 | `SENTRY_SDK_NAME` | `//config:sdk_name` string flag | Compile-time SDK name. |
 | `SENTRY_SDK_VERSION` | `//config:sdk_version` string flag | Defaults to the packaged upstream version. |
 | `SENTRY_HANDLER_STACK_SIZE` | `//config:handler_stack_size` int flag | Default 64, preserving upstream units and interpretation. |
-| `SENTRY_BATCHER_BUFFER_COUNT` | `//config:batcher_buffer_count` int flag | Default 3; reject values below 2 or above 10. |
+| `SENTRY_BATCHER_BUFFER_COUNT` | `//config:batcher_buffer_count` int flag | Default 3; forwarded directly and assumed valid. |
 | `SENTRY_THREAD_STACK_GUARANTEE_FACTOR` | Future Windows int flag | Default 10; not active on Linux/macOS. |
 | `SENTRY_THREAD_STACK_GUARANTEE_AUTO_INIT` | Future Windows bool flag | Default true; not active on Linux/macOS. |
 | `SENTRY_THREAD_STACK_GUARANTEE_VERBOSE_LOG` | Future Windows bool flag | Default false; not active on Linux/macOS. |
 | `SENTRY_EMBED_INFO` | `//config:embed_info` bool | Enables explicit embedded build metadata. |
 | `SENTRY_BUILD_PLATFORM` | `//config:build_platform_name` string flag | Optional embedded string; distinct from Bazel's actual platform constraints. |
 | `SENTRY_BUILD_VARIANT` | `//config:build_variant` string flag | Optional embedded variant. |
-| `SENTRY_BUILD_ID` | `//config:build_id` string flag or stamping | Never generate an action-time timestamp by default. |
-| `SENTRY_EMBED_INFO_ITEMS` | Repeatable/list encoding or label-generated header | Validate every `key:value` entry. |
+| `SENTRY_BUILD_ID` | `//config:build_id` string flag | Explicit value, then SDK build metadata, then deterministic `unstamped`; never action-time stamping. |
+| `SENTRY_EMBED_INFO_ITEMS` | Deferred | Custom embedded fields are not exposed in the initial Linux/macOS port. |
 | `SENTRY_LINK_PTHREAD` | `//config:link_pthread` string flag | Prefer `auto`, with explicit `on`/`off` only for compatibility investigation. |
 | `SENTRY_LIBUNWIND_SYSTEM` | Linux libunwind label override | Default to the vendored implementation; an explicit label supplies a system/external replacement. |
 | `SENTRY_BREAKPAD_SYSTEM` | Breakpad label override | Default to the vendored implementation; an explicit label supplies an external replacement. |
 | `CRASHPAD_ZLIB_SYSTEM` | Crashpad zlib label selection | Prefer the BCR zlib target when compatible; retain vendored selection until differential tests prove parity. |
+
+Plain string settings are intentionally not revalidated or escaped. Callers must supply ordinary identifier/semantic-version text that is already safe in both a POSIX shell word and a C string; quotes, backslashes, control characters, and shell metacharacters are outside the supported setting contract.
 
 For custom backend, screenshot, transport, platform integration, Qt, system curl, system Breakpad, and system libunwind use label-valued injection points or explicitly documented aliases. Do not search the host filesystem or use ambient `pkg-config` results.
 
@@ -694,6 +696,7 @@ Mitigation: make compatibility tiers explicit in documentation and metadata. Add
 - Ordinary consumers initially inherited the implementation's `src/` and native-daemon include roots. Private header-only libraries plus rules_cc `implementation_deps` retain those compilation contexts only for SDK actions. An external-consumer action-query now contains only the public virtual include tree.
 - Platform OS/CPU checks alone accidentally accepted LLVM musl platforms even though musl is deferred. Production and Crashpad targets additionally require the rules_cc libc constraint `glibc` or `macosx`; unsupported libc platforms fail during target compatibility analysis.
 - The shared native consumer wrapper originally propagated only the Crashpad handler. Its configuration-selected runtime data now also carries `sentry-crash`; a configured dependency-path query proves the wrapper-to-daemon edge, and static/shared native crash fixtures pass on Linux x86_64/aarch64 and macOS arm64.
+- Skylib `string_flag` and `int_flag` expose their optional `make_variable` through `TemplateVariableInfo`. A native `genrule` can consume those values by listing the settings in `toolchains`; no file-generating Starlark rule is required. Skylib's `write_file` and `expand_template` do not perform this Make-variable expansion themselves.
 
 ## Decision Log
 
@@ -710,7 +713,7 @@ Mitigation: make compatibility tiers explicit in documentation and metadata. Add
 - 2026-09-16: Prioritize Linux when macOS blocks progress; an explicit macOS host-tool fallback was initially acceptable. This fallback was later removed by the source-built MIG 138 decision below.
 - 2026-09-16: Mark unsupported target and execution platforms incompatible instead of allowing late compile/action failures.
 - 2026-09-16: Check in the generated-equivalent libunwind configuration headers needed by the BCR overlay. Keep them conservative and sysroot-portable. Publish only the verified glibc contract; mark deferred musl platforms incompatible rather than treating exploratory cross-builds as support.
-- 2026-09-16: Preserve upstream's batcher-buffer validation as an analysis-time integer setting constrained to 2 through 10.
+- 2026-09-16: Preserve upstream's batcher-buffer validation as an analysis-time integer setting constrained to 2 through 10. Superseded on 2026-09-17 by the plain-setting decision below.
 - 2026-09-16: Use BCR curl `8.21.0.bcr.2` and zlib `1.3.2`; keep curl and compression dependencies conditional in the analyzed C++ graph.
 - 2026-09-16: Treat `link_curl=off` as an explicitly non-hermetic runtime mode, not as a hermetic alternative to the default linked curl mode.
 - 2026-09-16: Expose custom backend, transport, screenshot, platform integration, and Qt Core dependencies through label settings. Missing labels analyze as incompatible.
@@ -738,6 +741,7 @@ Mitigation: make compatibility tiers explicit in documentation and metadata. Add
 - 2026-09-16: Restrict anonymous BCR Bazel 8 backend/default tasks to Linux. Run macOS Bazel 8 from `bcr_test_module`, where the consumer can lawfully own and register its LLVM development toolchain.
 - 2026-09-16: Use fork `master` as the canonical Bazel-enabled branch and fork `upstream` as the exact `getsentry/master` mirror. For subsequent releases, merge the official release tag into `master`; published version directories remain immutable in BCR itself.
 - 2026-09-16: Publish from the official getsentry archive plus an overlay using fork-owned entry generation. The standard `publish-to-bcr` workflow supports arbitrary archive URLs, but not an overlaid `MODULE.bazel`; revisit it when overlay support exists.
+- 2026-09-17: Generate `sentry_embedded_info.cpp` with a native `genrule` and Make variables from plain Skylib settings. Assume callers provide valid SDK identity, buffer count, platform, variant, and build-ID values; remove `c_string_flag` and `bounded_int_flag`. Defer `SENTRY_EMBED_INFO_ITEMS`. Preserve deterministic `unstamped` fallback instead of CMake's timestamp.
 
 ## Outcomes
 
@@ -772,7 +776,7 @@ Implemented:
 - Vendored `//vendor/libunwind:unwind` for Linux x86_64/aarch64, including reviewed generated-equivalent configuration headers rather than a configure action or host probe.
 - Exact Linux/macOS compatibility constraints. A Windows target request fails during analysis as incompatible.
 - `none` and `inproc` backend definitions, transport `none`, Linux system link inputs, public header mapping, and upstream warning/visibility options.
-- A validated `batcher_buffer_count` setting with the upstream inclusive range 2–10.
+- A plain `batcher_buffer_count` integer setting, forwarded directly to the compile definition.
 - Bazel ports of all 570 upstream unit declarations, fixtures, and fuzz regression corpus. The transport-`none` lane skips only the two HTTP-transport-specific tests.
 - Public and isolated-consumer smoke applications that initialize the SDK, capture an event, and shut down.
 
@@ -786,7 +790,7 @@ Verification with Bazel 9.2.0 and LLVM `0.8.21`:
 - Linux aarch64 glibc 2.28 `inproc` unit binary cross-build: passed; ELF inspection reports AArch64 and `/lib/ld-linux-aarch64.so.1`.
 - Historical exploratory Linux x86_64/aarch64 musl `inproc` cross-builds passed, but musl remains outside the published compatibility contract and is now rejected during target analysis.
 - Linux x86_64 `libsentry.a`: archive members inspected; public definitions include `sentry_init`, `sentry_capture_event`, and `sentry_close`; action summary contains 52 C++ compile actions and one archive action.
-- Invalid `batcher_buffer_count=1`: rejected during analysis with the 2–10 range.
+- `batcher_buffer_count` values are not revalidated by Bazel; callers are responsible for preserving upstream's 2–10 contract.
 - Windows target platform: rejected during analysis as incompatible.
 
 Linux runtime completion:
@@ -805,7 +809,7 @@ Implemented:
 - Optional zlib transport compression independent of transport selection.
 - Custom backend, transport, screenshot, and platform-integration label injection, plus the unstable headers-only `//:sentry_extension_api` dependency used to implement those contracts.
 - Optional Qt integration as a private C++17 target with a required injected Qt Core label.
-- Validated SDK identity settings, pthread selection, deterministic embedded metadata generation, and custom metadata fields.
+- Plain SDK identity settings, pthread selection, and deterministic embedded metadata generation. Custom metadata fields are deferred.
 - A hermetic C loopback HTTP server that receives a real Sentry envelope, plus focused gzip decompression/content validation.
 
 Verification with Bazel 9.2.0 and LLVM `0.8.21`:
@@ -941,7 +945,7 @@ Verification:
 Implemented:
 
 - Explicit root `BUILD.bazel` declarations for the Breakpad, Crashpad, and Sentry graphs. No target-declaration-only macro or Bazel-owned file below either submodule path remains, while `//:sentry`, `//:sentry_shared`, `//:sentry_shared_library`, `//:crashpad_handler`, and `//:sentry_crash` remain stable.
-- Small BCR publication inputs under `.bcr/`: a metadata template plus versioned presubmit configuration, explicit 53-file manifest, and immutable release descriptor. The complete module entry is generated only in an official BCR checkout.
+- Small BCR publication inputs under `.bcr/`: a metadata template plus versioned presubmit configuration, explicit 51-file manifest, and immutable release descriptor. The complete module entry is generated only in an official BCR checkout.
 - Archive provenance against the official `sentry-native.zip`: SHA-256 `d35145daaafddc50c0c87ec564acf0ba9968e67b23981e7f57c702b2dd6f2ff1`, no `strip_prefix`, and per-overlay SRI values generated by the official BCR integrity tool.
 - Presubmit coverage for Bazel 8.x/9.x minimal public targets on Linux/macOS x86_64/aarch64; Bazel 9 Breakpad, Crashpad, and native backend artifact tests on all four desktop architecture runners; Linux-only anonymous Bazel 8 Crashpad/default lanes; and Bazel 8/9 static/shared Crashpad consumer tests. The LLVM-owning `bcr_test_module` supplies the Bazel 8 macOS default lane because anonymous modules cannot inherit a dependency's development toolchain.
 - A shared-library Crashpad smoke consumer in `e2e/bcr`, complementing the existing static consumer.
@@ -988,17 +992,35 @@ Verification:
 ### Publication-layout hardening report
 
 - Removed the checked-in `bcr/modules/sentry_native` publication copy. Canonical Bazel files now exist only at their source-checkout paths; generated module metadata, `MODULE.bazel`, `source.json`, overlay copies, and integrity values exist only in the target BCR checkout.
-- Retained only compact, versioned inputs under `.bcr/releases/0.16.6`: the release descriptor, explicit 53-file manifest, and presubmit configuration. The descriptor pins overlay commit `7f1ba20c885f1097c99cccb08331692b68b1b0ad` as well as the upstream tag, commit, and official archive identity.
+- Retained only compact, versioned inputs under `.bcr/releases/0.16.6`: the release descriptor, explicit 51-file manifest, and presubmit configuration. The descriptor pins an immutable overlay commit as well as the upstream tag, commit, and official archive identity.
 - Replaced staging synchronization/export scripts with `tools/bcr/prepare_entry.sh`. It extracts `MODULE.bazel` and every manifest-selected file from the pinned commit, merges module metadata without discarding BCR-owned version history, invokes the official integrity updater, and verifies the resulting archive identity and overlay boundary.
 - Updated CI so validation generates the entry in a fresh official BCR checkout. The publication job downloads that validated module artifact and commits those exact bytes instead of regenerating them independently.
 - Corrected the `publish-to-bcr` finding: it can target the official getsentry archive URL. The current incompatibility is its requirement that `MODULE.bazel` already be present in the archive and its lack of BCR overlay support.
 
 Verification:
 
-- `tools/bcr/verify_release.sh 0.16.6` reports exactly 53 files pinned to the overlay commit.
+- `tools/bcr/verify_release.sh 0.16.6` reports exactly the 51 files pinned to the overlay commit.
 - Generation against a fresh current BCR checkout produced a module subtree byte-for-byte identical to the former checked-in entry, including `source.json` and every computed SRI value.
 - Current official `bcr_validation` passed source URL, archive integrity, overlay/module assembly, metadata identity, and presubmit syntax; only the expected first-version maintainer review remained. Current `setup_presubmit_repos` successfully materialized both official consumer repositories.
 - A subsequent native macOS runtime invocation reached analysis and compilation but the host exhausted disk space while rebuilding LLVM. This was an environment failure after the generated-entry equivalence and official validation checks; the identical former entry's Bazel 8/9 runtime results remain recorded above.
+
+### Embedded-info simplification report
+
+Implemented:
+
+- Replaced the custom `sentry_embedded_info` rule with a native `genrule` whose only command dependencies are Bazel's standard genrule shell setup and shell builtins.
+- Replaced `c_string_flag` and `bounded_int_flag` with Skylib `string_flag` and `int_flag`; values are forwarded without extra Starlark validation.
+- Removed the `embed_info_items` setting and its custom field emission from the Linux/macOS port.
+- Retained target-derived `Linux`/`Darwin` defaults, semantic-version base extraction, explicit build-ID precedence, SDK build-metadata fallback, deterministic `unstamped`, build variant, and compilation mode.
+- Enabled embedded metadata in the Bazel 8/9 Linux/macOS static/shared BCR consumer presubmit task so the generated source remains a publication gate.
+
+Verification:
+
+- The macOS output with defaulted platform/variant/build-ID settings and SDK build metadata is byte-identical to the previous custom rule. Explicit platform, variant, and build-ID overrides produce the same prior fields, excluding the intentionally removed custom item.
+- macOS arm64 static/shared none-backend builds with `embed_info=true` pass, and the focused embedded-info unit cases pass.
+- The isolated BCR consumer remotely generated the Linux x86_64 source with `PLATFORM:Linux` and passed the focused embedded-info unit cases on the paired LLVM/BuildBuddy x86_64 target and worker with Bazel 8.4.2 and 9.2.0.
+- The presubmit-equivalent static and shared Crashpad consumers pass on Linux x86_64 remote workers with Bazel 9.2.0 and `embed_info=true`.
+- Direct root remote execution still hits the previously documented sibling-layout `_main` input-tree failure; the external-module consumer topology is the valid remote verification path.
 
 On final completion, also record:
 

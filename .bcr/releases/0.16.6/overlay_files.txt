@@ -15,13 +15,10 @@ bazel/crashpad_curl_runtime_anchor.c
 bazel/crashpad_handler_sources.bzl
 bazel/crashpad_mig.bzl
 bazel/crashpad_sources.bzl
-bazel/embedded_info.bzl
 bazel/sentry.bzl
-bazel/sentry_macos.exports
 bazel/sentry_sources.bzl
 bazel/upstream_manifest.bzl
 config/BUILD.bazel
-config/settings.bzl
 e2e/bcr/BUILD.bazel
 e2e/bcr/MODULE.bazel
 e2e/bcr/smoke.c

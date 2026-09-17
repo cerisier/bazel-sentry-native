@@ -141,6 +141,7 @@ bcr_test_module:
         - --@sentry_native//config:backend=crashpad
         - --@sentry_native//config:transport=none
         - --@sentry_native//config:screenshot=none
+        - --@sentry_native//config:embed_info=true
       test_targets:
         - //:crashpad_smoke_test
         - //:shared_crashpad_smoke_test
