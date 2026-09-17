@@ -134,6 +134,16 @@ label_flag(
 )
 
 label_flag(
+    name = "libunwind",
+    build_setting_default = "//vendor/libunwind:unwind",
+)
+
+label_flag(
+    name = "libunwind_remote",
+    build_setting_default = "//vendor/libunwind:unwind_remote",
+)
+
+label_flag(
     name = "custom_backend",
     build_setting_default = "//bazel:missing_custom_extension",
 )

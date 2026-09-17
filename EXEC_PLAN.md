@@ -302,7 +302,7 @@ Defaults use `auto` where upstream chooses according to the target platform. A c
 | `SENTRY_BUILD_ID` | `//config:build_id` string flag | Explicit value, then SDK build metadata, then deterministic `unstamped`; never action-time stamping. |
 | `SENTRY_EMBED_INFO_ITEMS` | Deferred | Custom embedded fields are not exposed in the initial Linux/macOS port. |
 | `SENTRY_LINK_PTHREAD` | `//config:link_pthread` string flag | Prefer `auto`, with explicit `on`/`off` only for compatibility investigation. |
-| `SENTRY_LIBUNWIND_SYSTEM` | Linux libunwind label override | Default to the vendored implementation; an explicit label supplies a system/external replacement. |
+| `SENTRY_LIBUNWIND_SYSTEM` | `//config:libunwind` and `//config:libunwind_remote` label flags | Default to the vendored local and remote implementations; explicit labels supply system/external replacements. |
 | `SENTRY_BREAKPAD_SYSTEM` | Breakpad label override | Default to the vendored implementation; an explicit label supplies an external replacement. |
 | `CRASHPAD_ZLIB_SYSTEM` | Crashpad zlib label selection | Prefer the BCR zlib target when compatible; retain vendored selection until differential tests prove parity. |
 

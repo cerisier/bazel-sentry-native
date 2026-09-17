@@ -839,7 +839,7 @@ _SENTRY_STATIC_LINK_DEPS = [":_sentry_mpack"] + select({
     "//config:embed_info_enabled": [":_sentry_embedded_info_static"],
     "//conditions:default": [],
 }) + select({
-    "@platforms//os:linux": ["//vendor/libunwind:unwind"],
+    "@platforms//os:linux": ["//config:libunwind"],
     "//conditions:default": [],
 }) + select({
     "//config:backend_breakpad": [":_sentry_breakpad_backend"],
@@ -871,7 +871,7 @@ _SENTRY_SHARED_LINK_DEPS = [":_sentry_mpack"] + select({
     "//config:embed_info_enabled": [":_sentry_embedded_info_shared"],
     "//conditions:default": [],
 }) + select({
-    "@platforms//os:linux": ["//vendor/libunwind:unwind"],
+    "@platforms//os:linux": ["//config:libunwind"],
     "//conditions:default": [],
 }) + select({
     "//config:backend_breakpad": [":_sentry_breakpad_backend_shared"],
@@ -1277,7 +1277,7 @@ cc_binary(
         "//config:embed_info_enabled": [":_sentry_embedded_info_static"],
         "//conditions:default": [],
     }) + select({
-        "@platforms//os:linux": ["//vendor/libunwind:unwind_remote"],
+        "@platforms//os:linux": ["//config:libunwind_remote"],
         "//conditions:default": [],
     }) + select({
         "//config:sentry_crash_curl_linked": ["@curl"],
