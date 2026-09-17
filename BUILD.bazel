@@ -54,6 +54,7 @@ load(
     "MINI_CHROMIUM_MACOS_SRCS",
     "MINI_CHROMIUM_POSIX_HDRS",
     "MINI_CHROMIUM_POSIX_SRCS",
+    "crashpad_compat_strip_prefix",
     "crashpad_copts",
     "crashpad_supported_platforms",
 )
@@ -436,23 +437,51 @@ objc_library(
     deps = ["//bazel:breakpad_core_services_compat"],
 )
 
+# Crashpad's libc and SDK wrappers depend on #include_next, so their roots must
+# precede the toolchain's system headers. Virtual include trees from ordinary
+# header-only cc_library targets provide that ordering on Bazel 8 and 9.
+# Bazel normalizes the reserved physical external/crashpad prefix away when the
+# repository is consumed as a module, so the helper selects the corresponding
+# root- or external-repository prefix.
+cc_library(
+    name = "_crashpad_compat_linux_shadow_headers",
+    hdrs = CRASHPAD_COMPAT_LINUX_SHADOW_HDRS,
+    strip_include_prefix = crashpad_compat_strip_prefix("linux"),
+    target_compatible_with = crashpad_supported_platforms() + select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
+cc_library(
+    name = "_crashpad_compat_macos_shadow_headers",
+    hdrs = CRASHPAD_COMPAT_MACOS_HDRS,
+    strip_include_prefix = crashpad_compat_strip_prefix("mac"),
+    target_compatible_with = crashpad_supported_platforms() + select({
+        "@platforms//os:macos": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
+cc_library(
+    name = "_crashpad_compat_non_mac_headers",
+    hdrs = ["external/crashpad/compat/non_mac/mach/mach.h"],
+    strip_include_prefix = crashpad_compat_strip_prefix("non_mac"),
+    target_compatible_with = crashpad_supported_platforms() + select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
 cc_library(
     name = "crashpad_compat",
     srcs = select({
         "@platforms//os:linux": ["external/crashpad/compat/linux/sys/mman_memfd_create.cc"],
         "//conditions:default": [],
     }),
-    hdrs = CRASHPAD_COMPAT_COMMON_HDRS + select({
-        "@platforms//os:linux": CRASHPAD_COMPAT_LINUX_SHADOW_HDRS + ["external/crashpad/compat/non_mac/mach/mach.h"],
-        "@platforms//os:macos": CRASHPAD_COMPAT_MACOS_HDRS,
-        "//conditions:default": [],
-    }),
+    hdrs = CRASHPAD_COMPAT_COMMON_HDRS,
     copts = crashpad_copts(),
-    includes = ["external/crashpad/compat/non_win"] + select({
-        "@platforms//os:linux": ["external/crashpad/compat/linux"],
-        "@platforms//os:macos": ["external/crashpad/compat/mac"],
-        "//conditions:default": [],
-    }),
+    includes = ["external/crashpad/compat/non_win"],
     linkopts = select({
         "@platforms//os:linux": ["-ldl"],
         "//conditions:default": [],
@@ -464,9 +493,12 @@ cc_library(
     }),
     deps = select({
         "@platforms//os:linux": [
+            ":_crashpad_compat_linux_shadow_headers",
+            ":_crashpad_compat_non_mac_headers",
             ":crashpad_interface",
             ":mini_chromium",
         ],
+        "@platforms//os:macos": [":_crashpad_compat_macos_shadow_headers"],
         "//conditions:default": [],
     }),
 )

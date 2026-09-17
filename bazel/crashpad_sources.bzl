@@ -25,6 +25,11 @@ def crashpad_copts():
         "//conditions:default": [],
     })
 
+def crashpad_compat_strip_prefix(platform_dir):
+    """Returns the compat header prefix for root and external-repo layouts."""
+    repository_prefix = "external/crashpad/" if native.repository_name() == "@" else ""
+    return repository_prefix + "compat/" + platform_dir
+
 MINI_CHROMIUM_COMMON_SRCS = [
     "//:external/crashpad/third_party/mini_chromium/mini_chromium/base/debug/alias.cc",
     "//:external/crashpad/third_party/mini_chromium/mini_chromium/base/files/file_path.cc",
