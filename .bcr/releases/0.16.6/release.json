@@ -4,7 +4,7 @@
     "archive_size": 9071053,
     "archive_url": "https://github.com/getsentry/sentry-native/releases/download/0.16.6/sentry-native.zip",
     "module_version": "0.16.6",
-    "overlay_commit": "3e802d82f389616e1287e7c61e4722dd6911e757",
+    "overlay_commit": "f305c054932d61421780d068e9ebfc1d43db64d8",
     "upstream_commit": "672b86c77c1864e1c0b5e72eefadc078e30ef700",
     "upstream_tag": "0.16.6"
 }
