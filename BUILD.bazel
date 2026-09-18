@@ -1330,7 +1330,6 @@ cc_library(
     ],
     implementation_deps = _SENTRY_PRIVATE_HEADER_DEPS + _SENTRY_STATIC_LINK_DEPS,
     includes = [],
-    linkstatic = True,
     linkopts = select({
         "@platforms//os:linux": [
             "-ldl",
@@ -1349,6 +1348,7 @@ cc_library(
         "//config:link_pthread_on": ["-lpthread"],
         "//conditions:default": [],
     }),
+    linkstatic = True,
     local_defines = _SENTRY_IMPLEMENTATION_DEFINES,
     strip_include_prefix = "include",
     target_compatible_with = _SENTRY_SUPPORTED_CONFIGURATION,
