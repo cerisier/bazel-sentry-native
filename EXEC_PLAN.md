@@ -591,7 +591,7 @@ Implementation sequence:
 6. [x] Replace checked-in registry staging with deterministic entry generation and official-validation wrappers.
 7. [x] Reproduce the contribution from the real fork plus initialized submodules, then validate the exact official-archive-plus-overlay module on Bazel 8 and 9.
 8. [x] Push the prepared release branch and pass the hosted fork/BCR verification workflows.
-9. [ ] Explicitly dispatch publication to create and complete the BCR pull request.
+9. [x] Explicitly dispatch publication, open the BCR pull request, and pass its complete hosted presubmit matrix.
 
 Acceptance criteria:
 
@@ -1126,7 +1126,8 @@ Focused verification:
 - The first hosted anonymous-module presubmit exposed a public-target composition defect not exercised by the one-target-at-a-time artifact tests: on Linux, the `sentry` `cc_library` defaulted to producing both static and dynamic artifacts, while `sentry_shared` explicitly owned `libsentry.so`. Building the advertised static and shared targets in one Bazel invocation therefore registered two `CppLink` actions for the same output.
 - `sentry` is the static SDK entry point and now sets `linkstatic = True`. This makes artifact ownership explicit: `sentry` owns the archive, while `sentry_shared` alone owns the shared object. The public target names and CMake-derived source/dependency graph do not change.
 - The exact three-target composition passes together on BuildBuddy Linux x86_64 remote workers with Bazel 8.8.0 (invocation `19aa63c2-0f93-4c7a-a88c-a13124029850`) and 9.2.0 (invocation `c3052403-44be-4255-86c2-8486dbd4de36`) using the consumer-owned LLVM toolchain. Bazel reports only `libsentry.a` and `libsentry.so`; action-query finds exactly one SDK shared-object-producing action, owned by `sentry_shared`. The materialized outputs are an ar archive and an x86-64 ELF shared object with SONAME `libsentry.so` and 423 exported `sentry_*` symbols.
-- Publication is not complete until the amended overlay is pushed to the existing BCR pull request and its hosted presubmit is green.
+- The exact validated artifact updated `bazelbuild/bazel-central-registry#10622` at fork commit `8fbfb3809e20c0a093aae83b5badb22ac0fd4b24`. Registry validation build `30540` and BCR presubmit build `41551` passed. All 20 configured Bazel jobs are green: minimal static/shared targets on Linux x86_64, Linux arm64, macOS x86_64, and macOS arm64 with Bazel 8 and 9; Breakpad and native public targets across the Bazel 9 platform matrix; and static/shared Crashpad consumer tests on Linux x86_64 and macOS arm64 with Bazel 8 and 9.
+- Automated publication work is complete. The pull request remains open only for the BCR's required maintainer review and merge; no failing or pending build is known.
 
 On final completion, also record:
 
