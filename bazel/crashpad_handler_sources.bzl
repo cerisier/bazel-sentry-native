@@ -1,4 +1,8 @@
-"""Exact snapshot, minidump, and handler manifests for Crashpad."""
+"""Exact snapshot, minidump, and handler manifests for Crashpad.
+
+When updating the overlay, compare normalized path multisets with the upstream
+Crashpad targets so snapshot, minidump, and handler boundaries remain explicit.
+"""
 
 CRASHPAD_SNAPSHOT_COMMON_SRCS = [
     "external/crashpad/snapshot/annotation_snapshot.cc",

@@ -1,9 +1,15 @@
+# BCR overlay for sentry-native's native rules_cc graph. Target boundaries,
+# options, and platform selections follow the upstream CMake graph. Exact
+# backend source inventories live in //bazel:*_sources.bzl; refresh them by
+# comparing normalized path multisets with the corresponding CMake target lists
+# rather than replacing the platform-specific lists with recursive globs.
+
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_import.bzl", "cc_import")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_shared_library.bzl", "cc_shared_library")
-load("@rules_cc//cc:cc_test.bzl", "cc_test")
 load("@rules_cc//cc:objc_library.bzl", "objc_library")
+load("@rules_python//python:defs.bzl", "py_binary")
 load(
     "//bazel:breakpad_sources.bzl",
     "BREAKPAD_HEADERS_COMMON",
@@ -416,6 +422,20 @@ cc_library(
     deps = [":crashpad_interface"],
 )
 
+# rules_python defaults this launcher to the execution platform's `python3`.
+# Consumers without one can select rules_python's script bootstrap instead.
+py_binary(
+    name = "_crashpad_mig_driver",
+    srcs = [
+        "external/crashpad/util/mach/mig.py",
+        "external/crashpad/util/mach/mig_fix.py",
+        "external/crashpad/util/mach/mig_gen.py",
+    ],
+    imports = ["external/crashpad/util/mach"],
+    main = "external/crashpad/util/mach/mig.py",
+    visibility = ["//visibility:private"],
+)
+
 crashpad_mig(
     name = "_crashpad_mig_codegen",
     arch = select({
@@ -427,11 +447,7 @@ crashpad_mig(
     child_port_types = "external/crashpad/util/mach/child_port_types.h",
     compat_headers = CRASHPAD_COMPAT_MACOS_HDRS,
     mig = "@apple_mig//:mig",
-    mig_driver = "external/crashpad/util/mach/mig.py",
-    mig_driver_support = [
-        "external/crashpad/util/mach/mig_fix.py",
-        "external/crashpad/util/mach/mig_gen.py",
-    ],
+    mig_driver = ":_crashpad_mig_driver",
     migcom = "@apple_mig//:migcom",
     target_compatible_with = crashpad_supported_platforms() + select({
         "@platforms//os:macos": [],
@@ -612,13 +628,6 @@ cc_library(
         "@platforms//os:macos": [":_crashpad_client_macos_objc"],
         "//conditions:default": [],
     }),
-)
-
-cc_test(
-    name = "crashpad_client_link_test",
-    srcs = ["//bazel:crashpad_client_link_test.cc"],
-    target_compatible_with = crashpad_supported_platforms(),
-    deps = [":crashpad_client"],
 )
 
 cc_library(

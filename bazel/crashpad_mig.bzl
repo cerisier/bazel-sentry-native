@@ -1,10 +1,10 @@
 """Cross-platform Crashpad MIG source generation."""
 
+load("@apple_support//lib:apple_support.bzl", "apple_support")
+load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@rules_cc//cc:action_names.bzl", "C_COMPILE_ACTION_NAME")
 load("@rules_cc//cc:find_cc_toolchain.bzl", "CC_TOOLCHAIN_ATTRS", "find_cpp_toolchain", "use_cc_toolchain")
 load("@rules_cc//cc/common:cc_common.bzl", "cc_common")
-
-_PYTHON_EXEC_TOOLS_TOOLCHAIN_TYPE = "@rules_python//python:exec_tools_toolchain_type"
 
 _INTERFACES = [
     "child_port",
@@ -30,7 +30,14 @@ def _sysroot_from_compile_action(ctx, cc_toolchain, feature_configuration):
             return command_line[index + 1]
         if argument.startswith("-isysroot=") or argument.startswith("--sysroot="):
             return argument.split("=", 1)[1]
-    fail("Crashpad MIG requires a C++ toolchain with a declared macOS sysroot")
+    return None
+
+def _uses_xcode_sdk(sysroot):
+    return (
+        not sysroot or
+        sysroot == apple_support.path_placeholders.sdkroot() or
+        paths.is_absolute(sysroot)
+    )
 
 def _crashpad_mig_impl(ctx):
     if ctx.attr.arch not in ["arm64", "x86_64"]:
@@ -44,18 +51,18 @@ def _crashpad_mig_impl(ctx):
         unsupported_features = ctx.disabled_features,
     )
     sysroot = _sysroot_from_compile_action(ctx, cc_toolchain, feature_configuration)
+    uses_xcode_sdk = _uses_xcode_sdk(sysroot)
+    if uses_xcode_sdk:
+        sysroot = apple_support.path_placeholders.sdkroot()
     clang = cc_common.get_tool_for_action(
         action_name = C_COMPILE_ACTION_NAME,
         feature_configuration = feature_configuration,
     )
-    python_exec_tools = ctx.toolchains[_PYTHON_EXEC_TOOLS_TOOLCHAIN_TYPE].exec_tools
-    if not python_exec_tools.exec_interpreter:
-        fail("Crashpad MIG requires a hermetic Python execution interpreter")
-    python_runtime = python_exec_tools.exec_interpreter[platform_common.ToolchainInfo].py3_runtime
-    if not python_runtime.interpreter:
-        fail("Crashpad MIG requires a file-backed hermetic Python execution interpreter")
-    python = python_runtime.interpreter
-
+    apple_platform_info = None
+    xcode_config = None
+    if uses_xcode_sdk:
+        apple_platform_info = apple_support.platform_info_from_rule_ctx(ctx)
+        xcode_config = ctx.attr._xcode_config[apple_common.XcodeVersionConfig]
     sources = []
     headers = []
     crashpad_dir = ctx.file.child_port_defs.dirname + "/../.."
@@ -66,14 +73,11 @@ def _crashpad_mig_impl(ctx):
         direct = [
             ctx.file.child_port_defs,
             ctx.file.child_port_types,
-            ctx.file.mig_driver,
-        ] + ctx.files.compat_headers + ctx.files.mig_driver_support,
-        transitive = [
-            cc_toolchain.all_files,
-            python_runtime.files,
-        ],
+        ] + ctx.files.compat_headers,
+        transitive = [cc_toolchain.all_files],
     )
     action_tools = [
+        ctx.attr.mig_driver[DefaultInfo].files_to_run,
         ctx.attr.mig[DefaultInfo].files_to_run,
         ctx.attr.migcom[DefaultInfo].files_to_run,
     ]
@@ -93,8 +97,6 @@ def _crashpad_mig_impl(ctx):
             defs = "{}/usr/include/mach/{}.defs".format(sysroot, interface)
 
         args = ctx.actions.args()
-        args.add("-B")
-        args.add(ctx.file.mig_driver)
         args.add("--arch={}".format(ctx.attr.arch))
         args.add("--sdk={}".format(sysroot))
         args.add("--include={}".format(crashpad_dir))
@@ -105,15 +107,25 @@ def _crashpad_mig_impl(ctx):
         args.add(defs)
         args.add_all(outputs)
 
-        ctx.actions.run(
-            arguments = [args],
-            executable = python,
-            inputs = action_inputs,
-            mnemonic = "CrashpadMig",
-            outputs = outputs,
-            progress_message = "Generating {} Crashpad MIG interface for %{{label}}".format(interface),
-            tools = action_tools,
-        )
+        action_kwargs = {
+            "arguments": [args],
+            "executable": ctx.executable.mig_driver,
+            "inputs": action_inputs,
+            "mnemonic": "CrashpadMig",
+            "outputs": outputs,
+            "progress_message": "Generating {} Crashpad MIG interface for %{{label}}".format(interface),
+            "tools": action_tools,
+        }
+        if uses_xcode_sdk:
+            apple_support.run(
+                actions = ctx.actions,
+                apple_platform_info = apple_platform_info,
+                xcode_config = xcode_config,
+                xcode_path_resolve_level = apple_support.xcode_path_resolve_level.args,
+                **action_kwargs
+            )
+        else:
+            ctx.actions.run(**action_kwargs)
 
     return [
         DefaultInfo(files = depset(sources + headers)),
@@ -142,10 +154,10 @@ crashpad_mig = rule(
             mandatory = True,
         ),
         "mig_driver": attr.label(
-            allow_single_file = [".py"],
+            cfg = "exec",
+            executable = True,
             mandatory = True,
         ),
-        "mig_driver_support": attr.label_list(allow_files = [".py"]),
         "migcom": attr.label(
             allow_single_file = True,
             cfg = "exec",
@@ -153,7 +165,7 @@ crashpad_mig = rule(
             mandatory = True,
         ),
         "output_dir": attr.string(default = "mig"),
-    } | CC_TOOLCHAIN_ATTRS,
-    fragments = ["cpp"],
-    toolchains = use_cc_toolchain() + [_PYTHON_EXEC_TOOLS_TOOLCHAIN_TYPE],
+    } | CC_TOOLCHAIN_ATTRS | apple_support.action_required_attrs() | apple_support.platform_constraint_attrs(),
+    fragments = ["apple", "cpp"],
+    toolchains = use_cc_toolchain(),
 )

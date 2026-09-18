@@ -1,4 +1,8 @@
-"""Exact source manifests for the sentry-native Crashpad fork."""
+"""Exact source manifests for the sentry-native Crashpad fork.
+
+When updating the overlay, compare normalized path multisets with the upstream
+Crashpad targets so platform selections remain explicit.
+"""
 
 def crashpad_supported_platforms():
     """Returns compatibility constraints for the currently supported matrix."""

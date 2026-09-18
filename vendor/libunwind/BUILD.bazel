@@ -1,3 +1,9 @@
+# BCR overlay for the libunwind implementation vendored by sentry-native.
+# Source groups and configuration follow this directory's CMakeLists.txt. The
+# generated public common header is materialized directly from libunwind's
+# checked-in CMake template instead of copying its implementation into overlay.
+
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 
 package(default_visibility = ["//visibility:private"])
@@ -180,11 +186,18 @@ _AARCH64_GENERIC_SRCS = [
     "src/aarch64/Gtrace.c",
 ]
 
+expand_template(
+    name = "libunwind_common_header",
+    out = "bazel_include/libunwind-common.h",
+    substitutions = {},
+    template = "cmake/libunwind-common.h.cmake.in",
+)
+
 _HDRS = glob([
     "bazel_include/*.h",
     "include/**/*.h",
     "src/**/*.h",
-])
+]) + [":libunwind_common_header"]
 
 _TEXTUAL_HDRS = glob(["src/**/G*.c"]) + ["src/elfxx.c"]
 

@@ -1,4 +1,8 @@
-"""Explicit sentry-native source manifests derived from upstream CMake."""
+"""Explicit sentry-native source manifests derived from upstream CMake.
+
+When updating the overlay, compare normalized path multisets with the upstream
+CMake target lists so platform and feature selections remain explicit.
+"""
 
 # Keep compiled source lists explicit: broad globs can silently add tests,
 # tools, or mutually exclusive platforms when the upstream release changes.

@@ -1,4 +1,8 @@
-"""Exact source manifests for the sentry-native Breakpad fork."""
+"""Exact source manifests for the sentry-native Breakpad fork.
+
+When updating the overlay, compare normalized path multisets with
+external/CMakeLists.txt so platform selections remain explicit.
+"""
 
 # These groups mirror //external:CMakeLists.txt. Header discovery remains
 # separate so the manifests cannot accidentally compile Breakpad tests/tools.

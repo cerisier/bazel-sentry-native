@@ -14,6 +14,8 @@
     "https://bcr.bazel.build/modules/abseil-cpp/20250512.1/MODULE.bazel": "d209fdb6f36ffaf61c509fcc81b19e81b411a999a934a032e10cd009a0226215",
     "https://bcr.bazel.build/modules/abseil-cpp/20250814.1/MODULE.bazel": "51f2312901470cdab0dbdf3b88c40cd21c62a7ed58a3de45b365ddc5b11bcab2",
     "https://bcr.bazel.build/modules/abseil-cpp/20250814.1/source.json": "cea3901d7e299da7320700abbaafe57a65d039f10d0d7ea601c4a66938ea4b0c",
+    "https://bcr.bazel.build/modules/apple_mig/138.0.1/MODULE.bazel": "65cc55f30642b8a765e0071af01a3eced5adfddeda124a00b6a701af453ed8ad",
+    "https://bcr.bazel.build/modules/apple_mig/138.0.1/source.json": "6c5671db21e055c1438b0cdfcabeb379b5424cde36c4d6dd645163000d111aa3",
     "https://bcr.bazel.build/modules/apple_support/1.11.1/MODULE.bazel": "1843d7cd8a58369a444fc6000e7304425fba600ff641592161d9f15b179fb896",
     "https://bcr.bazel.build/modules/apple_support/1.15.1/MODULE.bazel": "a0556fefca0b1bb2de8567b8827518f94db6a6e7e7d632b4c48dc5f865bc7c85",
     "https://bcr.bazel.build/modules/apple_support/1.21.0/MODULE.bazel": "ac1824ed5edf17dee2fdd4927ada30c9f8c3b520be1b5fd02a5da15bc10bff3e",
@@ -530,8 +532,94 @@
           }
         }
       }
+    },
+    "@@windows_support+//windows:extensions.bzl%msvc_runtime": {
+      "general": {
+        "bzlTransitiveDigest": "yv3gSwY6QneXA6YvHLn9tSmuOkNp2EPN5NFXHC48mdE=",
+        "usagesDigest": "j8EMwmbQHIUSKsY4k1yYsDZjs7jVmpl6RzACaxmhnVk=",
+        "recordedInputs": [
+          "REPO_MAPPING:windows_support+,bazel_tools bazel_tools"
+        ],
+        "generatedRepoSpecs": {
+          "msvc_runtime": {
+            "repoRuleId": "@@windows_support+//windows/private/extensions:msvc_runtime.bzl%_msvc_runtime_repository",
+            "attributes": {
+              "msvc_version": "14.50.35717",
+              "architectures": [
+                "x64",
+                "arm64"
+              ],
+              "installer_manifest_url": "https://download.visualstudio.microsoft.com/download/pr/fdc37f6e-59f6-4054-838a-b476eeaa6ec3/1d82370739911457e0a2f6be15d8b5f569531b352b2eabb961429eea1e99e356/VisualStudio.vsman",
+              "installer_manifest_integrity": "sha256-qOhU+p8/uurCfXME4pfxZg1xN0ATid61fPeYPzPBb+8="
+            }
+          }
+        },
+        "moduleExtensionMetadata": {
+          "explicitRootModuleDirectDeps": [],
+          "explicitRootModuleDirectDevDeps": [
+            "msvc_runtime"
+          ],
+          "useAllRepos": "NO",
+          "reproducible": false
+        }
+      }
+    },
+    "@@windows_support+//windows:extensions.bzl%windows_sdk": {
+      "general": {
+        "bzlTransitiveDigest": "yv3gSwY6QneXA6YvHLn9tSmuOkNp2EPN5NFXHC48mdE=",
+        "usagesDigest": "l8Y8yuk3rYSaWDELd/p665JeBEmW5E00q/JPz8/wDQE=",
+        "recordedInputs": [
+          "REPO_MAPPING:windows_support+,bazel_tools bazel_tools"
+        ],
+        "generatedRepoSpecs": {
+          "windows_sdk": {
+            "repoRuleId": "@@windows_support+//windows/private/extensions:windows_sdk.bzl%_windows_sdk_repository",
+            "attributes": {
+              "windows_sdk_version": "10.0.26100.7705",
+              "windows_sdk_integrity": {
+                "Microsoft.Windows.SDK.CPP": "sha256-/0VWYL7gcadEcVqWZWZvopwHaBV509gVlZqe7FpVZCQ=",
+                "Microsoft.Windows.SDK.CPP.x64": "sha256-rWzpD/lAEGmdKVSLPCseUsieuBFD4hmRVdmlw4ABtSs=",
+                "Microsoft.Windows.SDK.CPP.arm64": "sha256-A7wMA9Q5zvhQdLvNQl+dXTptO0Z5Z6zSHaO6bf7q+mc="
+              },
+              "transformations": {
+                "base/c/Include/10.0.26100.0/shared/driverspecs.h": "base/c/Include/10.0.26100.0/shared/DriverSpecs.h",
+                "base/c/Include/10.0.26100.0/shared/specstrings.h": "base/c/Include/10.0.26100.0/shared/SpecStrings.h",
+                "base/c/Include/10.0.26100.0/um/ole2.h": "base/c/Include/10.0.26100.0/um/Ole2.h",
+                "base/c/Include/10.0.26100.0/um/olectl.h": "base/c/Include/10.0.26100.0/um/OleCtl.h",
+                "**/*.h": "lowercase",
+                "**/*.lib": "lowercase",
+                "**/*.Lib": "lowercase"
+              },
+              "architectures": [
+                "x64",
+                "arm64"
+              ]
+            }
+          }
+        },
+        "moduleExtensionMetadata": {
+          "explicitRootModuleDirectDeps": [],
+          "explicitRootModuleDirectDevDeps": [
+            "windows_sdk"
+          ],
+          "useAllRepos": "NO",
+          "reproducible": false
+        }
+      }
     }
   },
-  "facts": {},
+  "facts": {
+    "@@windows_support+//windows:extensions.bzl%msvc_runtime": {
+      "visual_studio_installer_manifest_v1": {
+        "integrity": "sha256-qOhU+p8/uurCfXME4pfxZg1xN0ATid61fPeYPzPBb+8=",
+        "request": {
+          "visual_studio_channel_url": "https://aka.ms/vs/stable/channel",
+          "visual_studio_installer_manifest_integrity": "sha256-qOhU+p8/uurCfXME4pfxZg1xN0ATid61fPeYPzPBb+8=",
+          "visual_studio_installer_manifest_url": "https://download.visualstudio.microsoft.com/download/pr/fdc37f6e-59f6-4054-838a-b476eeaa6ec3/1d82370739911457e0a2f6be15d8b5f569531b352b2eabb961429eea1e99e356/VisualStudio.vsman"
+        },
+        "url": "https://download.visualstudio.microsoft.com/download/pr/fdc37f6e-59f6-4054-838a-b476eeaa6ec3/1d82370739911457e0a2f6be15d8b5f569531b352b2eabb961429eea1e99e356/VisualStudio.vsman"
+      }
+    }
+  },
   "factsVersions": {}
 }
