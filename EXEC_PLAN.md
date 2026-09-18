@@ -1120,6 +1120,13 @@ Focused verification:
 - Action-query reports the header as a `TemplateExpand` action over the vendored CMake template; no copied header body remains in the overlay.
 - The minimized manifest is sorted, unique, and resolves to 15 existing files. Presubmit and GitHub workflow YAML parse successfully. Per the cleanup policy, the relocated backend runtime matrix was not repeated locally.
 
+### BCR publication report
+
+- The manual publication workflow assembled and validated the official `0.16.6` archive plus its 15-file overlay, tested the exact materialized consumer, pushed `cerisier/bazel-central-registry:sentry_native-0.16.6`, and opened `bazelbuild/bazel-central-registry#10622`.
+- The first hosted anonymous-module presubmit exposed a public-target composition defect not exercised by the one-target-at-a-time artifact tests: on Linux, the `sentry` `cc_library` defaulted to producing both static and dynamic artifacts, while `sentry_shared` explicitly owned `libsentry.so`. Building the advertised static and shared targets in one Bazel invocation therefore registered two `CppLink` actions for the same output.
+- `sentry` is the static SDK entry point and now sets `linkstatic = True`. This makes artifact ownership explicit: `sentry` owns the archive, while `sentry_shared` alone owns the shared object. The public target names and CMake-derived source/dependency graph do not change.
+- Publication is not complete until the amended overlay is pushed to the existing BCR pull request and its hosted presubmit is green.
+
 On final completion, also record:
 
 - Published targets and tested configuration matrix.

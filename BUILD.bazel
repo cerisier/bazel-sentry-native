@@ -1330,6 +1330,7 @@ cc_library(
     ],
     implementation_deps = _SENTRY_PRIVATE_HEADER_DEPS + _SENTRY_STATIC_LINK_DEPS,
     includes = [],
+    linkstatic = True,
     linkopts = select({
         "@platforms//os:linux": [
             "-ldl",
